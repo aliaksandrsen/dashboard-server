@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import 'dotenv/config';
-import { PrismaClient } from '../generated/prisma/client.js';
+import { PrismaClient, type Product } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { faker } from '@faker-js/faker';
 
@@ -27,7 +27,7 @@ const main = async () => {
   });
 
   // 2. Create 5 products
-  const createdProducts = [];
+  const createdProducts: Product[] = [];
   for (let i = 0; i < 5; i++) {
     const product = await db.product.create({
       data: {
