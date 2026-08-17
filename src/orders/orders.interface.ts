@@ -1,20 +1,61 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export class CreateOrderDto {
+  @IsNumber()
+  @IsPositive()
+  total!: number;
+
+  @IsInt()
+  @IsPositive()
+  userId!: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  productIds?: string[];
+}
 
 export class UpdateOrderDto {
   @IsNumber()
-  total!: number;
+  @IsPositive()
+  @IsOptional()
+  total?: number;
 
-  @IsNotEmpty()
-  products!: Product[];
+  @IsInt()
+  @IsPositive()
+  @IsOptional()
+  userId?: number;
 
-  @IsNotEmpty()
-  userId!: number;
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  productIds?: string[];
+}
+
+export class OrderQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  skip?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  take?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  userId?: number;
 }

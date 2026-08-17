@@ -1,0 +1,143 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Dashboard Server API",
+    "description": "REST API collection for Dashboard Server (Orders CRUD)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?take=10&skip=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "take",
+                  "value": "10",
+                  "description": "Number of orders to retrieve"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of orders to skip"
+                },
+                {
+                  "key": "userId",
+                  "value": "1",
+                  "description": "Filter by user ID",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve list of all orders with optional pagination and user filtering"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            },
+            "description": "Retrieve single order details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"total\": 350.00,\n  \"userId\": 1,\n  \"productIds\": [\n    \"34d05e33-a69e-410c-8ad1-6bb3481711d1\",\n    \"9eea332a-8c1b-4a0c-bee1-c97ba80f3308\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            },
+            "description": "Create a new order for a user with products"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"total\": 249.99,\n  \"userId\": 1,\n  \"productIds\": [\n    \"34d05e33-a69e-410c-8ad1-6bb3481711d1\",\n    \"9eea332a-8c1b-4a0c-bee1-c97ba80f3308\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            },
+            "description": "Partially update an order (total, user, or replace product list)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            },
+            "description": "Delete an existing order by ID"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
