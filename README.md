@@ -17,14 +17,13 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/dashboard?schema=pub
 
 ### 2. Start Database (Docker)
 
-Start PostgreSQL and pgAdmin containers:
+Start PostgreSQL container:
 
 ```bash
 docker compose up -d
 ```
 
 - **PostgreSQL**: `localhost:5432` (`postgres:postgres`, db: `dashboard`)
-- **pgAdmin**: [http://localhost:5050](http://localhost:5050) (`admin@admin.com` / `admin`)
 
 ### 3. Install & Database Setup
 

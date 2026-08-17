@@ -10,11 +10,11 @@ type Product = {
 
 export class UpdateOrderDto {
   @IsNumber()
-  total: number;
+  total!: number;
 
   @IsNotEmpty()
-  products: Product[];
+  products!: Product[];
 
   @IsNotEmpty()
-  userId: number;
+  userId!: number;
 }
