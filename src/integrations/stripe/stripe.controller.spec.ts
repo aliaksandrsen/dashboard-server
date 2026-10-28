@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StripeController } from './stripe.controller.js';
 import { StripeService } from './stripe.service.js';
