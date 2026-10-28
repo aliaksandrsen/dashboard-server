@@ -32,10 +32,11 @@ model Order {
 }
 
 model Product {
-  id        String   @id @default(uuid())
-  name      String
-  price     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+  id              String   @id @default(uuid())
+  name            String
+  price           Float
+  stripeProductId String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  orders          Order[]
 }
