@@ -11,7 +11,10 @@ import type { Response } from 'express';
 import { StripeService } from './stripe.service.js';
 import { CreateStripePaymentDto } from './stripe.interface.js';
 
-@Controller('/v1/stripe')
+@Controller({
+  path: 'stripe',
+  version: '1',
+})
 export class StripeController {
   constructor(private readonly stripeService: StripeService) {}
 

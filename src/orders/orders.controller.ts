@@ -19,7 +19,10 @@ import {
   UpdateOrderDto,
 } from './orders.interface.js';
 
-@Controller('orders')
+@Controller({
+  path: 'orders',
+  version: '1',
+})
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

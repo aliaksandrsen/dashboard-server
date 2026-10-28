@@ -19,7 +19,10 @@ import {
   UserQueryDto,
 } from './users.interface.js';
 
-@Controller(['users', 'v1/users'])
+@Controller({
+  path: 'users',
+  version: '1',
+})
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
