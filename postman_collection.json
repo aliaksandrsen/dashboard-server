@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Dashboard Server API",
-    "description": "REST API collection for Dashboard Server (Orders CRUD, Stripe Payments)",
+    "description": "REST API collection for Dashboard Server (Orders & Products CRUD, Stripe Payments)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -14,6 +14,11 @@
     {
       "key": "orderId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "34d05e33-a69e-410c-8ad1-6bb3481711d1",
       "type": "string"
     }
   ],
@@ -134,6 +139,127 @@
               "path": ["orders", "{{orderId}}"]
             },
             "description": "Delete an existing order by ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?take=10&skip=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "take",
+                  "value": "10",
+                  "description": "Number of products to retrieve"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of products to skip"
+                },
+                {
+                  "key": "search",
+                  "value": "Book",
+                  "description": "Filter products by name substring",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve list of all products with optional pagination and name search"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Retrieve single product details by UUID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fullstack JavaScript Book\",\n  \"price\": 49.99,\n  \"stripeProductId\": \"prod_V63bpA1h7XozvZ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            },
+            "description": "Create a new product with optional stripeProductId"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 39.99\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Partially update product properties (name, price, or stripeProductId)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Delete an existing product by UUID"
           },
           "response": []
         }
