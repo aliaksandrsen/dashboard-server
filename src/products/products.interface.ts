@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -42,7 +43,7 @@ export class ProductQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @IsPositive()
+  @Min(0)
   skip?: number;
 
   @IsOptional()
