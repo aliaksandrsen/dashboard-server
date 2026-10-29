@@ -1,5 +1,6 @@
 allowBuilds:
   '@nestjs/core': false
+  '@parcel/watcher': true
   '@prisma/engines': false
   esbuild: false
   prisma: false
