@@ -1,0 +1,32 @@
+info:
+  name: Get All Orders
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/v1/orders?take=10&skip=0"
+  params:
+    - name: take
+      value: "10"
+      type: query
+      description: Number of orders to retrieve
+    - name: skip
+      value: "0"
+      type: query
+      description: Number of orders to skip
+    - name: userId
+      value: "1"
+      type: query
+      description: Filter by user ID
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: Retrieve list of all orders with optional pagination and user filtering

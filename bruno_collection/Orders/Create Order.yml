@@ -1,0 +1,32 @@
+info:
+  name: Create Order
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/v1/orders"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "total": 350.00,
+        "userId": 1,
+        "productIds": [
+          "34d05e33-a69e-410c-8ad1-6bb3481711d1",
+          "9eea332a-8c1b-4a0c-bee1-c97ba80f3308"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: Create a new order for a user with products

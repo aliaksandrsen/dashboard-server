@@ -1,0 +1,32 @@
+info:
+  name: Get All Users
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/v1/users?take=10&skip=0"
+  params:
+    - name: take
+      value: "10"
+      type: query
+      description: Number of users to retrieve
+    - name: skip
+      value: "0"
+      type: query
+      description: Number of users to skip
+    - name: search
+      value: John
+      type: query
+      description: Filter users by name or email substring
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: Retrieve list of all users with optional pagination and search (also supports /v1/users)

@@ -1,0 +1,31 @@
+info:
+  name: Create Payment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/v1/stripe/payments"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Origin
+      value: "{{baseUrl}}"
+      description: Origin header for redirect URLs
+  body:
+    type: json
+    data: |-
+      {
+        "priceId": "price_1Nxxxxxxxxxxxxxxxxxxxx",
+        "quantity": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: Create a Stripe Checkout session for payment
