@@ -23,7 +23,7 @@ export class OrdersService {
    * Create a new order
    */
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    const { total, userId, productIds } = createOrderDto;
+    const { total, userId, stripeInvoiceId, productIds } = createOrderDto;
     this.logger.log(`Creating new order for user ${userId}`);
 
     try {
@@ -31,6 +31,7 @@ export class OrdersService {
         data: {
           total,
           userId,
+          stripeInvoiceId,
           products: productIds?.length
             ? {
                 connect: productIds.map((id) => ({ id })),
@@ -108,7 +109,7 @@ export class OrdersService {
     // Verify order exists first
     await this.findOne(id);
 
-    const { total, userId, productIds } = updateOrderDto;
+    const { total, userId, stripeInvoiceId, productIds } = updateOrderDto;
 
     try {
       const updatedOrder = await this.prisma.order.update({
@@ -116,6 +117,7 @@ export class OrdersService {
         data: {
           total,
           userId,
+          stripeInvoiceId,
           products:
             productIds !== undefined
               ? {

@@ -16,7 +16,12 @@ export class CreateOrderDto {
 
   @IsInt()
   @IsPositive()
-  userId!: number;
+  @IsOptional()
+  userId?: number;
+
+  @IsString()
+  @IsOptional()
+  stripeInvoiceId?: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -34,6 +39,10 @@ export class UpdateOrderDto {
   @IsPositive()
   @IsOptional()
   userId?: number;
+
+  @IsString()
+  @IsOptional()
+  stripeInvoiceId?: string;
 
   @IsArray()
   @IsString({ each: true })

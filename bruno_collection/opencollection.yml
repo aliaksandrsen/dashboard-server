@@ -15,7 +15,7 @@ request:
       value: "1"
 
 docs:
-  content: REST API collection for Dashboard Server (Users, Products & Orders CRUD, Stripe Payments)
+  content: REST API collection for Dashboard Server (Users, Products & Orders CRUD, Stripe Payments, Cron Jobs)
   type: text/markdown
 bundled: false
 extensions:

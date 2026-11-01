@@ -4,9 +4,16 @@ import { StripeModule } from './integrations/stripe/stripe.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { UsersModule } from './users/users.module.js';
+import { JobsModule } from './jobs/jobs.module.js';
 
 @Module({
-  imports: [StripeModule, OrdersModule, ProductsModule, UsersModule],
+  imports: [
+    StripeModule,
+    OrdersModule,
+    ProductsModule,
+    UsersModule,
+    JobsModule,
+  ],
   providers: [PrismaService],
 })
 export class AppModule {}
