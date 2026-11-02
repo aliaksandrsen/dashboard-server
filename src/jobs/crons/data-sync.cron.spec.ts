@@ -48,7 +48,9 @@ describe('TasksService', () => {
 
   describe('addCronJob, stopCronJob, deleteCronJob', () => {
     it('should register and start a cron job in the registry', () => {
-      const callback = jest.fn();
+      const callback = jest
+        .fn<() => Promise<void>>()
+        .mockResolvedValue(undefined);
       service.addCronJob('test_job', '* * * * *', callback);
 
       expect(mockSchedulerRegistry.addCronJob).toHaveBeenCalledWith(
@@ -106,7 +108,7 @@ describe('TasksService', () => {
         )
         .mockResolvedValueOnce({ data: [mockInvoice] } as never);
 
-      mockPrisma.order.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.order.findUnique.mockResolvedValueOnce(null as never);
       mockPrisma.user.findUnique.mockResolvedValueOnce({
         id: 42,
         email: 'buyer@example.com',

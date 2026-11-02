@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service.js';
+import { StripeService } from '../integrations/stripe/stripe.service.js';
+import { CreateStripeProductDto } from '../integrations/stripe/stripe.interface.js';
 import {
   CreateProductDto,
   ProductQueryDto,
@@ -17,28 +19,89 @@ import { Product, Prisma } from '../../generated/prisma/client.js';
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripeService: StripeService,
+  ) {}
 
   /**
-   * Create a new product
+   * Two-phase product creation pipeline:
+   * 1. Create product and price in Stripe (if stripeProductId is not provided).
+   * 2. Persist product in PostgreSQL with the Stripe reference.
+   * With automatic rollback in Stripe if database insertion fails.
    */
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    const { name, price, stripeProductId } = createProductDto;
-    this.logger.log(`Creating new product: ${name}`);
+    const {
+      name,
+      price,
+      description,
+      stripeProductId: existingStripeProductId,
+    } = createProductDto;
+
+    this.logger.debug(
+      `Started two-phase product creation pipeline with input:\n${JSON.stringify(createProductDto, null, 2)}`,
+    );
+
+    let stripeProductId = existingStripeProductId;
+    let createdInStripe = false;
+
+    // Phase 1: Register product in Stripe if not already provided
+    if (!stripeProductId) {
+      this.logger.log(
+        `Phase 1: Creating product in Stripe for "${name}" ($${price})`,
+      );
+      const stripeProductParams: CreateStripeProductDto = {
+        name,
+        price,
+        description,
+      };
+      const stripeResult =
+        await this.stripeService.createProduct(stripeProductParams);
+      stripeProductId = stripeResult.stripeProductId;
+      createdInStripe = true;
+      this.logger.log(
+        `Phase 1 completed: Stripe product created with id: ${stripeProductId}`,
+      );
+    } else {
+      this.logger.log(
+        `Phase 1 skipped: Existing stripeProductId provided: ${stripeProductId}`,
+      );
+    }
+
+    // Phase 2: Persist in PostgreSQL
+    const productRecord = {
+      name,
+      price,
+      stripeProductId,
+    };
+
+    this.logger.log(
+      `Phase 2: Creating database record in PostgreSQL:\n${JSON.stringify(productRecord, null, 2)}`,
+    );
 
     try {
       const product = await this.prisma.product.create({
-        data: {
-          name,
-          price,
-          stripeProductId,
-        },
+        data: productRecord,
       });
 
-      this.logger.log(`Product #${product.id} created successfully`);
+      this.logger.log(
+        `Phase 2 completed: Product #${product.id} successfully created in PostgreSQL with stripeProductId: ${product.stripeProductId}`,
+      );
       return product;
     } catch (err: unknown) {
-      this.logger.error('Failed to create product', err);
+      this.logger.error(
+        `Phase 2 failed: Database insertion failed for product "${name}". Initiating compensation rollback...`,
+        err,
+      );
+
+      // Rollback: Deactivate the created Stripe product to avoid orphaned active records
+      if (createdInStripe && stripeProductId) {
+        this.logger.warn(
+          `Rollback: Deactivating orphaned Stripe product ${stripeProductId}`,
+        );
+        await this.stripeService.deactivateProduct(stripeProductId);
+      }
+
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
           throw new BadRequestException(
@@ -46,7 +109,9 @@ export class ProductsService {
           );
         }
       }
-      throw new InternalServerErrorException('Failed to create product');
+      throw new InternalServerErrorException(
+        'Failed to create product in database',
+      );
     }
   }
 

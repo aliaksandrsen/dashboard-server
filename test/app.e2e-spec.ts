@@ -41,6 +41,28 @@ describe('Orders (e2e)', () => {
     expect(typeof body.result.skipped).toBe('number');
   });
 
+  it('/v1/products (POST) creates product in Stripe and PostgreSQL', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/v1/products')
+      .send({
+        name: `E2E Product ${Date.now()}`,
+        price: 24.5,
+        description: 'Automated E2E pipeline test product',
+      })
+      .expect(201);
+
+    const product = res.body as {
+      id: string;
+      name: string;
+      price: number;
+      stripeProductId: string;
+    };
+
+    expect(product.id).toBeDefined();
+    expect(product.price).toBe(24.5);
+    expect(product.stripeProductId).toMatch(/^prod_/);
+  });
+
   afterEach(async () => {
     await app.close();
   });

@@ -20,6 +20,10 @@ export class CreateProductDto {
 
   @IsString()
   @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
   stripeProductId?: string;
 }
 
@@ -33,6 +37,10 @@ export class UpdateProductDto {
   @IsPositive()
   @IsOptional()
   price?: number;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
 
   @IsString()
   @IsOptional()

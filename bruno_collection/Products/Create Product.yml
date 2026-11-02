@@ -15,7 +15,7 @@ http:
       {
         "name": "Fullstack JavaScript Book",
         "price": 49.99,
-        "stripeProductId": "prod_V63bpA1h7XozvZ"
+        "description": "Comprehensive guide to fullstack JavaScript development"
       }
   auth: inherit
 
@@ -26,4 +26,4 @@ settings:
   maxRedirects: 5
   forwardAuthorizationHeader: false
 
-docs: Create a new product with optional stripeProductId
+docs: Create a new product. When stripeProductId is omitted, it automatically registers the product and price in Stripe, then saves the product to PostgreSQL with the generated stripeProductId.
