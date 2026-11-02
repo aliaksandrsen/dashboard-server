@@ -1,5 +1,6 @@
 import { vi, describe, beforeEach, it, expect, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Response } from 'express';
 import { StripeService } from './stripe.service.js';
 
 describe('StripeService', () => {
@@ -101,6 +102,90 @@ describe('StripeService', () => {
       expect(stripeProductsUpdateSpy).toHaveBeenCalledWith('prod_123', {
         active: false,
       });
+    });
+
+    it('should catch and log error if deactivation fails without throwing', async () => {
+      vi.spyOn(
+        (
+          service as unknown as {
+            stripe: { products: { update: Mock } };
+          }
+        ).stripe.products,
+        'update',
+      ).mockRejectedValueOnce(new Error('Update failed'));
+
+      await expect(
+        service.deactivateProduct('prod_123'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('createPayment', () => {
+    it('should create a checkout session and redirect to session.url', async () => {
+      const mockSession = { url: 'https://checkout.stripe.com/pay/cs_test123' };
+      const sessionsCreateSpy = vi
+        .spyOn(
+          (
+            service as unknown as {
+              stripe: { checkout: { sessions: { create: Mock } } };
+            }
+          ).stripe.checkout.sessions,
+          'create',
+        )
+        .mockResolvedValueOnce(mockSession);
+
+      const statusFn = vi.fn().mockReturnThis();
+      const redirectFn = vi.fn();
+      const mockRes = {
+        status: statusFn,
+        redirect: redirectFn,
+      } as unknown as Response;
+
+      await service.createPayment({
+        payment: { priceId: 'price_123', quantity: 2 },
+        origin: 'http://localhost:3000',
+        res: mockRes,
+      });
+
+      expect(sessionsCreateSpy).toHaveBeenCalledWith({
+        line_items: [
+          {
+            price: 'price_123',
+            quantity: 2,
+          },
+        ],
+        mode: 'payment',
+        success_url: 'http://localhost:3000/?success=true',
+        cancel_url: 'http://localhost:3000/?canceled=true',
+      });
+      expect(statusFn).toHaveBeenCalledWith(303);
+      expect(redirectFn).toHaveBeenCalledWith(
+        'https://checkout.stripe.com/pay/cs_test123',
+      );
+    });
+
+    it('should throw an error if session.url is missing', async () => {
+      vi.spyOn(
+        (
+          service as unknown as {
+            stripe: { checkout: { sessions: { create: Mock } } };
+          }
+        ).stripe.checkout.sessions,
+        'create',
+      ).mockResolvedValueOnce({ url: null });
+
+      const mockRes = {
+        status: vi.fn().mockReturnThis(),
+        redirect: vi.fn(),
+      } as unknown as Response;
+
+      await expect(
+        service.createPayment({
+          payment: { priceId: 'price_123', quantity: 1 },
+          origin: 'http://localhost:3000',
+          res: mockRes,
+        }),
+      ).rejects.toThrow('Failed to retrieve Stripe session URL');
     });
   });
 });

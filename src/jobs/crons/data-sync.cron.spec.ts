@@ -25,6 +25,7 @@ describe('TasksService', () => {
   const mockSchedulerRegistry = {
     addCronJob: vi.fn(),
     getCronJob: vi.fn().mockReturnValue(mockCronJob),
+    getCronJobs: vi.fn().mockReturnValue(new Map([['test_job', mockCronJob]])),
     deleteCronJob: vi.fn(),
   };
 
@@ -72,6 +73,32 @@ describe('TasksService', () => {
       expect(mockSchedulerRegistry.deleteCronJob).toHaveBeenCalledWith(
         'test_job',
       );
+    });
+
+    it('should initialize default sync cron job on onModuleInit', () => {
+      const addCronJobSpy = vi.spyOn(service, 'addCronJob');
+      service.onModuleInit();
+
+      expect(addCronJobSpy).toHaveBeenCalledWith(
+        'sync_stripe_orders',
+        expect.any(String),
+        expect.any(Function),
+      );
+    });
+
+    it('should stop all registered cron jobs on onModuleDestroy', async () => {
+      await service.onModuleDestroy();
+
+      expect(mockSchedulerRegistry.getCronJobs).toHaveBeenCalled();
+      expect(mockCronJob.stop).toHaveBeenCalled();
+    });
+
+    it('should handle error gracefully on onModuleDestroy', async () => {
+      mockSchedulerRegistry.getCronJobs.mockImplementationOnce(() => {
+        throw new Error('Registry failed');
+      });
+
+      await expect(service.onModuleDestroy()).resolves.toBeUndefined();
     });
   });
 
@@ -146,6 +173,67 @@ describe('TasksService', () => {
 
       expect(result).toEqual({ processed: 1, created: 0, skipped: 1 });
       expect(mockPrisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw when stripe.invoices.list fails', async () => {
+      vi.spyOn(
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
+          .invoices,
+        'list',
+      ).mockRejectedValueOnce(new Error('Stripe API unreachable'));
+
+      await expect(service.cronSyncStripeOrders()).rejects.toThrow(
+        'Stripe API unreachable',
+      );
+    });
+
+    it('should catch error and continue loop if single invoice processing fails', async () => {
+      const mockInvoice = {
+        id: 'in_bad',
+        total: 1000,
+      };
+
+      vi.spyOn(
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
+          .invoices,
+        'list',
+      ).mockResolvedValueOnce({ data: [mockInvoice] });
+
+      mockPrisma.order.findUnique.mockRejectedValueOnce(
+        new Error('DB read error'),
+      );
+
+      const result = await service.cronSyncStripeOrders();
+      expect(result).toEqual({ processed: 1, created: 0, skipped: 0 });
+    });
+
+    it('should handle invoice with null total and unknown customer email', async () => {
+      const mockInvoice = {
+        id: 'in_null_total',
+        total: null,
+        customer_email: 'unknown@example.com',
+      };
+
+      vi.spyOn(
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
+          .invoices,
+        'list',
+      ).mockResolvedValueOnce({ data: [mockInvoice] });
+
+      mockPrisma.order.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.order.create.mockResolvedValueOnce({ id: 2 });
+
+      const result = await service.cronSyncStripeOrders();
+
+      expect(result).toEqual({ processed: 1, created: 1, skipped: 0 });
+      expect(mockPrisma.order.create).toHaveBeenCalledWith({
+        data: {
+          stripeInvoiceId: 'in_null_total',
+          total: 0,
+          userId: undefined,
+        },
+      });
     });
   });
 });
