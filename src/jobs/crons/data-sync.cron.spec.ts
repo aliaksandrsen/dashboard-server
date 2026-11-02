@@ -1,4 +1,4 @@
-import { jest, describe, beforeEach, it, expect } from '@jest/globals';
+import { vi, describe, beforeEach, it, expect, type Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { TasksService } from './data-sync.cron.js';
@@ -9,27 +9,27 @@ describe('TasksService', () => {
 
   const mockPrisma = {
     order: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
     },
     user: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
   };
 
   const mockCronJob = {
-    start: jest.fn(),
-    stop: jest.fn().mockReturnValue(Promise.resolve()),
+    start: vi.fn(),
+    stop: vi.fn().mockReturnValue(Promise.resolve()),
   };
 
   const mockSchedulerRegistry = {
-    addCronJob: jest.fn(),
-    getCronJob: jest.fn().mockReturnValue(mockCronJob),
-    deleteCronJob: jest.fn(),
+    addCronJob: vi.fn(),
+    getCronJob: vi.fn().mockReturnValue(mockCronJob),
+    deleteCronJob: vi.fn(),
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,7 +48,7 @@ describe('TasksService', () => {
 
   describe('addCronJob, stopCronJob, deleteCronJob', () => {
     it('should register and start a cron job in the registry', () => {
-      const callback = jest
+      const callback = vi
         .fn<() => Promise<void>>()
         .mockResolvedValue(undefined);
       service.addCronJob('test_job', '* * * * *', callback);
@@ -78,13 +78,13 @@ describe('TasksService', () => {
   describe('cronSyncStripeOrders', () => {
     it('should return processed=0 when Stripe returns no invoices', async () => {
       // Mock stripe invoices.list
-      const stripeInvoicesListSpy = jest
+      const stripeInvoicesListSpy = vi
         .spyOn(
-          (service as unknown as { stripe: { invoices: { list: jest.Mock } } })
+          (service as unknown as { stripe: { invoices: { list: Mock } } })
             .stripe.invoices,
           'list',
         )
-        .mockResolvedValueOnce({ data: [] } as never);
+        .mockResolvedValueOnce({ data: [] });
 
       const result = await service.cronSyncStripeOrders();
 
@@ -100,20 +100,18 @@ describe('TasksService', () => {
         customer_email: 'buyer@example.com',
       };
 
-      jest
-        .spyOn(
-          (service as unknown as { stripe: { invoices: { list: jest.Mock } } })
-            .stripe.invoices,
-          'list',
-        )
-        .mockResolvedValueOnce({ data: [mockInvoice] } as never);
+      vi.spyOn(
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
+          .invoices,
+        'list',
+      ).mockResolvedValueOnce({ data: [mockInvoice] });
 
-      mockPrisma.order.findUnique.mockResolvedValueOnce(null as never);
+      mockPrisma.order.findUnique.mockResolvedValueOnce(null);
       mockPrisma.user.findUnique.mockResolvedValueOnce({
         id: 42,
         email: 'buyer@example.com',
-      } as never);
-      mockPrisma.order.create.mockResolvedValueOnce({ id: 1 } as never);
+      });
+      mockPrisma.order.create.mockResolvedValueOnce({ id: 1 });
 
       const result = await service.cronSyncStripeOrders();
 
@@ -133,18 +131,16 @@ describe('TasksService', () => {
         total: 2000,
       };
 
-      jest
-        .spyOn(
-          (service as unknown as { stripe: { invoices: { list: jest.Mock } } })
-            .stripe.invoices,
-          'list',
-        )
-        .mockResolvedValueOnce({ data: [mockInvoice] } as never);
+      vi.spyOn(
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
+          .invoices,
+        'list',
+      ).mockResolvedValueOnce({ data: [mockInvoice] });
 
       mockPrisma.order.findUnique.mockResolvedValueOnce({
         id: 99,
         stripeInvoiceId: 'in_already_exists',
-      } as never);
+      });
 
       const result = await service.cronSyncStripeOrders();
 

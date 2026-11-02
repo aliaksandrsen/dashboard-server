@@ -1,4 +1,4 @@
-import { jest, describe, beforeEach, it, expect } from '@jest/globals';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from './products.service.js';
 import { PrismaService } from '../utils/prisma.service.js';
@@ -10,21 +10,21 @@ describe('ProductsService', () => {
 
   const mockPrisma = {
     product: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
   };
 
   const mockStripeService = {
-    createProduct: jest.fn(),
-    deactivateProduct: jest.fn(),
+    createProduct: vi.fn(),
+    deactivateProduct: vi.fn(),
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,7 +46,7 @@ describe('ProductsService', () => {
       mockStripeService.createProduct.mockResolvedValueOnce({
         stripeProductId: 'prod_stripe_123',
         stripePriceId: 'price_stripe_456',
-      } as never);
+      });
 
       const mockCreatedProduct: Product = {
         id: 'uuid-1',
@@ -57,9 +57,7 @@ describe('ProductsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrisma.product.create.mockResolvedValueOnce(
-        mockCreatedProduct as never,
-      );
+      mockPrisma.product.create.mockResolvedValueOnce(mockCreatedProduct);
 
       const result = await service.create({
         name: 'Desk Lamp',
@@ -92,9 +90,7 @@ describe('ProductsService', () => {
         updatedAt: new Date(),
       };
 
-      mockPrisma.product.create.mockResolvedValueOnce(
-        mockCreatedProduct as never,
-      );
+      mockPrisma.product.create.mockResolvedValueOnce(mockCreatedProduct);
 
       const result = await service.create({
         name: 'Chair',
@@ -117,10 +113,10 @@ describe('ProductsService', () => {
       mockStripeService.createProduct.mockResolvedValueOnce({
         stripeProductId: 'prod_stripe_rollback',
         stripePriceId: 'price_stripe_rollback',
-      } as never);
+      });
 
       mockPrisma.product.create.mockRejectedValueOnce(
-        new Error('Database connection lost') as never,
+        new Error('Database connection lost'),
       );
 
       await expect(
@@ -148,7 +144,7 @@ describe('ProductsService', () => {
     it('should return a single product by id', async () => {
       mockPrisma.product.findUnique.mockResolvedValueOnce({
         id: 'uuid-1',
-      } as never);
+      });
       const res = await service.findOne('uuid-1');
       expect(res).toEqual({ id: 'uuid-1' });
     });
@@ -156,11 +152,11 @@ describe('ProductsService', () => {
     it('should update product', async () => {
       mockPrisma.product.findUnique.mockResolvedValueOnce({
         id: 'uuid-1',
-      } as never);
+      });
       mockPrisma.product.update.mockResolvedValueOnce({
         id: 'uuid-1',
         name: 'Updated',
-      } as never);
+      });
 
       const res = await service.update('uuid-1', { name: 'Updated' });
       expect(res).toEqual({ id: 'uuid-1', name: 'Updated' });
@@ -169,10 +165,10 @@ describe('ProductsService', () => {
     it('should delete product', async () => {
       mockPrisma.product.findUnique.mockResolvedValueOnce({
         id: 'uuid-1',
-      } as never);
+      });
       mockPrisma.product.delete.mockResolvedValueOnce({
         id: 'uuid-1',
-      } as never);
+      });
 
       const res = await service.remove('uuid-1');
       expect(res).toEqual({ id: 'uuid-1' });

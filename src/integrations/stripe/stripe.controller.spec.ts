@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StripeController } from './stripe.controller.js';
 import { StripeService } from './stripe.service.js';
@@ -13,7 +13,7 @@ describe('StripeController', () => {
         {
           provide: StripeService,
           useValue: {
-            createPayment: jest.fn(),
+            createPayment: vi.fn(),
           },
         },
       ],
