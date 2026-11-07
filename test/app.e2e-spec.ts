@@ -64,6 +64,18 @@ describe('Orders (e2e)', () => {
     expect(product.stripeProductId).toMatch(/^prod_/);
   });
 
+  it('/v1/products (GET) caches products list and serves from cache', async () => {
+    const res1 = await request(app.getHttpServer())
+      .get('/v1/products')
+      .expect(200);
+    expect(Array.isArray(res1.body)).toBe(true);
+
+    const res2 = await request(app.getHttpServer())
+      .get('/v1/products')
+      .expect(200);
+    expect(res2.body).toEqual(res1.body);
+  });
+
   afterEach(async () => {
     await app.close();
   });

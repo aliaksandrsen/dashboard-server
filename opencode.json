@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "servers": {
+      "postgres": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@modelcontextprotocol/server-postgres",
+          "postgresql://postgres:postgres@localhost:5432/dashboard"
+        ]
+      }
+    }
+  }
+}
