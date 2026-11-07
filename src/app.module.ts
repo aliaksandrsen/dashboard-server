@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { PrismaService } from './utils/prisma.service.js';
 import { StripeModule } from './integrations/stripe/stripe.module.js';
 import { OrdersModule } from './orders/orders.module.js';
@@ -8,6 +9,9 @@ import { JobsModule } from './jobs/jobs.module.js';
 
 @Module({
   imports: [
+    CacheModule.register({
+      isGlobal: true,
+    }),
     StripeModule,
     OrdersModule,
     ProductsModule,
