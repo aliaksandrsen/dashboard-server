@@ -19,12 +19,18 @@ updates:
       nestjs:
         patterns:
           - "@nestjs/*"
+        update-types:
+          - "minor"
+          - "patch"
       prisma:
         patterns:
           - "prisma"
           - "@prisma/*"
           - "pg"
           - "@types/pg"
+        update-types:
+          - "minor"
+          - "patch"
       eslint:
         patterns:
           - "eslint"
@@ -32,10 +38,16 @@ updates:
           - "typescript-eslint"
           - "eslint-config-prettier"
           - "eslint-plugin-prettier"
+        update-types:
+          - "minor"
+          - "patch"
       vitest:
         patterns:
           - "vitest"
           - "@vitest/coverage-v8"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
