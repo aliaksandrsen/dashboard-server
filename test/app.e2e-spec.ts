@@ -4,6 +4,7 @@ import { INestApplication, VersioningType } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module.js';
+import { createWinstonLogger } from './../src/utils/winston.logger.js';
 
 describe('Orders (e2e)', () => {
   let app: INestApplication<App>;
@@ -13,7 +14,9 @@ describe('Orders (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({
+      logger: createWinstonLogger(),
+    });
     app.enableVersioning({
       type: VersioningType.URI,
     });

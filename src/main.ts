@@ -1,16 +1,12 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { LogLevel, ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module.js';
+import { createWinstonLogger } from './utils/winston.logger.js';
 
 async function bootstrap() {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const logLevels: LogLevel[] = isProduction
-    ? ['error', 'warn', 'log']
-    : ['error', 'warn', 'log', 'debug', 'verbose'];
-
   const app = await NestFactory.create(AppModule, {
-    logger: logLevels,
+    logger: createWinstonLogger(),
   });
 
   app.enableVersioning({
