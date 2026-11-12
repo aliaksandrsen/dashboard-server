@@ -1,6 +1,7 @@
 # Project Rules & Agent Guidelines
 
 ## 1. Overview & Tech Stack
+
 - **Framework**: [NestJS 11](https://nestjs.com/) (Node.js backend)
 - **Module System**: ESM (`"type": "module"` in `package.json`)
 - **Language**: TypeScript
@@ -11,7 +12,9 @@
 ---
 
 ## 2. Package Management & Commands
+
 Always use `pnpm` for running scripts and installing packages:
+
 - **Development**: `pnpm start:dev`
 - **Build**: `pnpm build`
 - **Linting & Formatting**: `pnpm lint` and `pnpm format`
@@ -25,7 +28,9 @@ Always use `pnpm` for running scripts and installing packages:
 ---
 
 ## 3. ESM & Import Conventions
+
 Because this repository is configured as an ESM project (`"type": "module"`):
+
 - **Relative Imports**: All relative imports **MUST** include the explicit `.js` extension in TypeScript files:
   ```typescript
   // Correct
@@ -41,6 +46,7 @@ Because this repository is configured as an ESM project (`"type": "module"`):
 ---
 
 ## 4. Prisma 7 & Database Guidelines
+
 - **Schema Location**: `prisma/schema.prisma`
 - **Configuration**: Managed via `prisma.config.ts` (using `defineConfig`).
 - **Prisma Client Generation**:
@@ -55,6 +61,7 @@ Because this repository is configured as an ESM project (`"type": "module"`):
 ---
 
 ## 5. NestJS Architecture & Design Patterns
+
 - **Module Structure**:
   - Keep features modular within `src/<feature>/` (e.g., `orders.module.ts`, `orders.controller.ts`, `orders.service.ts`, `orders.interface.ts` or DTOs).
   - Register new modules and providers in `src/app.module.ts`.
@@ -70,12 +77,13 @@ Because this repository is configured as an ESM project (`"type": "module"`):
 ---
 
 ## 6. Testing & Quality Standards
+
 - **Unit Tests**:
   - Co-locate unit tests alongside the files they test (`*.spec.ts`).
   - Mock `PrismaService` or other dependencies using `@nestjs/testing`.
   - Run tests with `pnpm test` before concluding tasks.
-- **Linting**:
-  - Ensure code adheres to ESLint and Prettier rules.
-  - Run `pnpm lint` and fix any linting errors before finalizing changes.
+- **Linting & Formatting**:
+  - Code style and linting are maintained via Oxlint and Oxfmt.
+  - Run `pnpm lint` and `pnpm format:check` and fix any errors before finalizing changes.
 - **Code Comments**:
   - Maintain documentation integrity; preserve existing comments and docstrings.

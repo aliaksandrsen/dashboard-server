@@ -5,14 +5,14 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/v1/users?take=10&skip=0"
+  url: '{{baseUrl}}/v1/users?take=10&skip=0'
   params:
     - name: take
-      value: "10"
+      value: '10'
       type: query
       description: Number of users to retrieve
     - name: skip
-      value: "0"
+      value: '0'
       type: query
       description: Number of users to skip
     - name: search

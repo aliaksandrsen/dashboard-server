@@ -55,9 +55,11 @@ pnpm prisma:seed
    docker compose up -d
    ```
 3. Create and apply a migration:
+
    ```bash
    pnpm prisma:migrate --name add_order_status
    ```
+
    Use a short `snake_case` name describing the change. Without `--name`, Prisma asks for one interactively.
 
    `pnpm prisma:migrate` runs `prisma migrate dev`, which:
@@ -77,12 +79,12 @@ If Prisma detects schema drift or a change that can drop data, it will warn you 
 
 ### When to Run Migrations
 
-| Situation | Commands |
-| --- | --- |
-| First setup / fresh clone | `pnpm prisma:migrate` → `pnpm prisma:generate` |
-| You edited `schema.prisma` | `pnpm prisma:migrate --name <change_name>` → `pnpm prisma:generate` |
-| You pulled new migration files | `pnpm prisma:migrate` → `pnpm prisma:generate` |
-| Production / CI | `pnpm prisma:generate` before `pnpm build`, then `pnpm exec prisma migrate deploy` before starting the app |
+| Situation                      | Commands                                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| First setup / fresh clone      | `pnpm prisma:migrate` → `pnpm prisma:generate`                                                             |
+| You edited `schema.prisma`     | `pnpm prisma:migrate --name <change_name>` → `pnpm prisma:generate`                                        |
+| You pulled new migration files | `pnpm prisma:migrate` → `pnpm prisma:generate`                                                             |
+| Production / CI                | `pnpm prisma:generate` before `pnpm build`, then `pnpm exec prisma migrate deploy` before starting the app |
 
 `/generated/prisma` is ignored by git, so the client does not exist on a fresh clone and becomes stale after any schema change. That is why `pnpm prisma:generate` is needed in every development case above, not only when you edit the schema yourself.
 

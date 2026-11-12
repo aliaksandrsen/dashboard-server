@@ -5,7 +5,7 @@ info:
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/v1/orders/{{orderId}}"
+  url: '{{baseUrl}}/v1/orders/{{orderId}}'
   headers:
     - name: Content-Type
       value: application/json

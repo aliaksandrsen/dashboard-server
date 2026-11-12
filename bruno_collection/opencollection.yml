@@ -8,11 +8,11 @@ request:
     - name: baseUrl
       value: http://localhost:3000
     - name: orderId
-      value: "1"
+      value: '1'
     - name: productId
       value: 34d05e33-a69e-410c-8ad1-6bb3481711d1
     - name: userId
-      value: "1"
+      value: '1'
 
 docs:
   content: REST API collection for Dashboard Server (Users, Products & Orders CRUD, Stripe Payments, Cron Jobs)

@@ -5,10 +5,10 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: 'npm' # See documentation for possible values
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'
     open-pull-requests-limit: 10
     cooldown:
       default-days: 3
@@ -18,41 +18,38 @@ updates:
     groups:
       nestjs:
         patterns:
-          - "@nestjs/*"
+          - '@nestjs/*'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
       prisma:
         patterns:
-          - "prisma"
-          - "@prisma/*"
-          - "pg"
-          - "@types/pg"
+          - 'prisma'
+          - '@prisma/*'
+          - 'pg'
+          - '@types/pg'
         update-types:
-          - "minor"
-          - "patch"
-      eslint:
+          - 'minor'
+          - 'patch'
+      oxc:
         patterns:
-          - "eslint"
-          - "@eslint/*"
-          - "typescript-eslint"
-          - "eslint-config-prettier"
-          - "eslint-plugin-prettier"
+          - 'oxlint'
+          - 'oxfmt'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
       vitest:
         patterns:
-          - "vitest"
-          - "@vitest/coverage-v8"
+          - 'vitest'
+          - '@vitest/coverage-v8'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "daily"
+      interval: 'daily'
     open-pull-requests-limit: 10
     cooldown:
       default-days: 1
