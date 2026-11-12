@@ -67,13 +67,10 @@ describe('UsersService', () => {
     });
 
     it('should throw BadRequestException when email already exists (P2002)', async () => {
-      const p2002Error = new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed',
-        {
-          code: 'P2002',
-          clientVersion: '7.10.1',
-        },
-      );
+      const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+      });
       mockPrisma.user.create.mockRejectedValueOnce(p2002Error);
 
       await expect(
@@ -184,25 +181,20 @@ describe('UsersService', () => {
     it('should throw NotFoundException if updating non-existent user', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.update(999, { name: 'New' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.update(999, { name: 'New' })).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if update violates unique email', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(sampleUser);
-      const p2002Error = new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed',
-        {
-          code: 'P2002',
-          clientVersion: '7.10.1',
-        },
-      );
+      const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+      });
       mockPrisma.user.update.mockRejectedValueOnce(p2002Error);
 
-      await expect(
-        service.update(1, { email: 'already-used@example.com' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.update(1, { email: 'already-used@example.com' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw InternalServerErrorException on update error', async () => {
@@ -236,9 +228,7 @@ describe('UsersService', () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(sampleUser);
       mockPrisma.user.delete.mockRejectedValueOnce(new Error('fail'));
 
-      await expect(service.remove(1)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(service.remove(1)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

@@ -13,20 +13,11 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import {
-  CACHE_MANAGER,
-  CacheInterceptor,
-  CacheKey,
-  CacheTTL,
-} from '@nestjs/cache-manager';
+import { CACHE_MANAGER, CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import type { Product } from '../../generated/prisma/client.js';
 import { ProductsService } from './products.service.js';
-import {
-  CreateProductDto,
-  ProductQueryDto,
-  UpdateProductDto,
-} from './products.interface.js';
+import { CreateProductDto, ProductQueryDto, UpdateProductDto } from './products.interface.js';
 
 @Controller({
   path: 'products',
@@ -40,9 +31,7 @@ export class ProductsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  public async create(
-    @Body() createProductDto: CreateProductDto,
-  ): Promise<Product> {
+  public async create(@Body() createProductDto: CreateProductDto): Promise<Product> {
     const product = await this.productsService.create(createProductDto);
     await this.cacheManager.del('products');
     return product;
@@ -52,16 +41,12 @@ export class ProductsController {
   @CacheKey('products')
   @CacheTTL(30 * 1000)
   @Get()
-  public async findAll(
-    @Query() query: ProductQueryDto,
-  ): Promise<Array<Product>> {
+  public async findAll(@Query() query: ProductQueryDto): Promise<Array<Product>> {
     return await this.productsService.findAll(query);
   }
 
   @Get(':id')
-  public async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Product> {
+  public async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Product> {
     return await this.productsService.findOne(id);
   }
 
@@ -76,9 +61,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  public async remove(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Product> {
+  public async remove(@Param('id', ParseUUIDPipe) id: string): Promise<Product> {
     const product = await this.productsService.remove(id);
     await this.cacheManager.del('products');
     return product;

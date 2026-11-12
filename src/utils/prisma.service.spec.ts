@@ -13,9 +13,7 @@ describe('PrismaService', () => {
   });
 
   it('should connect to database on onModuleInit', async () => {
-    const connectSpy = vi
-      .spyOn(service, '$connect')
-      .mockResolvedValue(undefined);
+    const connectSpy = vi.spyOn(service, '$connect').mockResolvedValue(undefined);
 
     await service.onModuleInit();
 
@@ -23,9 +21,7 @@ describe('PrismaService', () => {
   });
 
   it('should disconnect from database on onModuleDestroy', async () => {
-    const disconnectSpy = vi
-      .spyOn(service, '$disconnect')
-      .mockResolvedValue(undefined);
+    const disconnectSpy = vi.spyOn(service, '$disconnect').mockResolvedValue(undefined);
 
     await service.onModuleDestroy();
 

@@ -1,13 +1,6 @@
 {
   "singleQuote": true,
   "trailingComma": "all",
-  "printWidth": 80,
   "sortPackageJson": false,
-  "ignorePatterns": [
-    "dist/**",
-    "coverage/**",
-    "generated/**",
-    "logs/**",
-    ".agents/**"
-  ]
+  "ignorePatterns": ["dist/**", "coverage/**", "generated/**", "logs/**", ".agents/**"]
 }

@@ -8,11 +8,7 @@ import {
 import { PrismaService } from '../utils/prisma.service.js';
 import { StripeService } from '../integrations/stripe/stripe.service.js';
 import { CreateStripeProductDto } from '../integrations/stripe/stripe.interface.js';
-import {
-  CreateProductDto,
-  ProductQueryDto,
-  UpdateProductDto,
-} from './products.interface.js';
+import { CreateProductDto, ProductQueryDto, UpdateProductDto } from './products.interface.js';
 import { Product, Prisma } from '../../generated/prisma/client.js';
 
 @Injectable()
@@ -31,12 +27,7 @@ export class ProductsService {
    * With automatic rollback in Stripe if database insertion fails.
    */
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    const {
-      name,
-      price,
-      description,
-      stripeProductId: existingStripeProductId,
-    } = createProductDto;
+    const { name, price, description, stripeProductId: existingStripeProductId } = createProductDto;
 
     this.logger.debug(
       `Started two-phase product creation pipeline with input:\n${JSON.stringify(createProductDto, null, 2)}`,
@@ -47,25 +38,18 @@ export class ProductsService {
 
     // Phase 1: Register product in Stripe if not already provided
     if (!stripeProductId) {
-      this.logger.log(
-        `Phase 1: Creating product in Stripe for "${name}" ($${price})`,
-      );
+      this.logger.log(`Phase 1: Creating product in Stripe for "${name}" ($${price})`);
       const stripeProductParams: CreateStripeProductDto = {
         name,
         price,
         description,
       };
-      const stripeResult =
-        await this.stripeService.createProduct(stripeProductParams);
+      const stripeResult = await this.stripeService.createProduct(stripeProductParams);
       stripeProductId = stripeResult.stripeProductId;
       createdInStripe = true;
-      this.logger.log(
-        `Phase 1 completed: Stripe product created with id: ${stripeProductId}`,
-      );
+      this.logger.log(`Phase 1 completed: Stripe product created with id: ${stripeProductId}`);
     } else {
-      this.logger.log(
-        `Phase 1 skipped: Existing stripeProductId provided: ${stripeProductId}`,
-      );
+      this.logger.log(`Phase 1 skipped: Existing stripeProductId provided: ${stripeProductId}`);
     }
 
     // Phase 2: Persist in PostgreSQL
@@ -96,22 +80,16 @@ export class ProductsService {
 
       // Rollback: Deactivate the created Stripe product to avoid orphaned active records
       if (createdInStripe && stripeProductId) {
-        this.logger.warn(
-          `Rollback: Deactivating orphaned Stripe product ${stripeProductId}`,
-        );
+        this.logger.warn(`Rollback: Deactivating orphaned Stripe product ${stripeProductId}`);
         await this.stripeService.deactivateProduct(stripeProductId);
       }
 
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException(
-            'A product with this stripeProductId already exists.',
-          );
+          throw new BadRequestException('A product with this stripeProductId already exists.');
         }
       }
-      throw new InternalServerErrorException(
-        'Failed to create product in database',
-      );
+      throw new InternalServerErrorException('Failed to create product in database');
     }
   }
 
@@ -158,10 +136,7 @@ export class ProductsService {
   /**
    * Update an existing product (PATCH)
    */
-  async update(
-    id: string,
-    updateProductDto: UpdateProductDto,
-  ): Promise<Product> {
+  async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
     this.logger.log(`Updating product #${id}`);
 
     // Verify product exists first
@@ -186,9 +161,7 @@ export class ProductsService {
       this.logger.error(`Failed to update product #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException(
-            'A product with this stripeProductId already exists.',
-          );
+          throw new BadRequestException('A product with this stripeProductId already exists.');
         }
       }
       throw new InternalServerErrorException('Failed to update product');

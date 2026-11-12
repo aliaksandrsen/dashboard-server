@@ -38,8 +38,7 @@ describe('StripeService', () => {
 
       const stripePricesCreateSpy = vi
         .spyOn(
-          (service as unknown as { stripe: { prices: { create: Mock } } })
-            .stripe.prices,
+          (service as unknown as { stripe: { prices: { create: Mock } } }).stripe.prices,
           'create',
         )
         .mockResolvedValueOnce(mockPrice);
@@ -114,9 +113,7 @@ describe('StripeService', () => {
         'update',
       ).mockRejectedValueOnce(new Error('Update failed'));
 
-      await expect(
-        service.deactivateProduct('prod_123'),
-      ).resolves.toBeUndefined();
+      await expect(service.deactivateProduct('prod_123')).resolves.toBeUndefined();
     });
   });
 
@@ -159,9 +156,7 @@ describe('StripeService', () => {
         cancel_url: 'http://localhost:3000/?canceled=true',
       });
       expect(statusFn).toHaveBeenCalledWith(303);
-      expect(redirectFn).toHaveBeenCalledWith(
-        'https://checkout.stripe.com/pay/cs_test123',
-      );
+      expect(redirectFn).toHaveBeenCalledWith('https://checkout.stripe.com/pay/cs_test123');
     });
 
     it('should throw an error if session.url is missing', async () => {

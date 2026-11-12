@@ -6,11 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service.js';
-import {
-  CreateOrderDto,
-  OrderQueryDto,
-  UpdateOrderDto,
-} from './orders.interface.js';
+import { CreateOrderDto, OrderQueryDto, UpdateOrderDto } from './orders.interface.js';
 import { Order, Prisma } from '../../generated/prisma/client.js';
 
 @Injectable()

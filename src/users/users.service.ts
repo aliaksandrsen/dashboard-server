@@ -6,11 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service.js';
-import {
-  CreateUserDto,
-  UpdateUserDto,
-  UserQueryDto,
-} from './users.interface.js';
+import { CreateUserDto, UpdateUserDto, UserQueryDto } from './users.interface.js';
 import { User, Prisma } from '../../generated/prisma/client.js';
 
 @Injectable()
@@ -41,9 +37,7 @@ export class UsersService {
       this.logger.error('Failed to create user', err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException(
-            'A user with this email already exists.',
-          );
+          throw new BadRequestException('A user with this email already exists.');
         }
       }
       throw new InternalServerErrorException('Failed to create user');
@@ -127,9 +121,7 @@ export class UsersService {
       this.logger.error(`Failed to update user #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException(
-            'A user with this email already exists.',
-          );
+          throw new BadRequestException('A user with this email already exists.');
         }
       }
       throw new InternalServerErrorException('Failed to update user');

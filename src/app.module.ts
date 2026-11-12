@@ -15,8 +15,7 @@ import { JobsModule } from './jobs/jobs.module.js';
       useFactory: () => {
         const redisHost = process.env.REDIS_HOST || 'localhost';
         const redisPort = process.env.REDIS_PORT || '6379';
-        const redisUrl =
-          process.env.REDIS_URL || `redis://${redisHost}:${redisPort}`;
+        const redisUrl = process.env.REDIS_URL || `redis://${redisHost}:${redisPort}`;
 
         return {
           stores: [createKeyv(redisUrl)],

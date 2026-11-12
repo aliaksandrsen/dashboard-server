@@ -105,24 +105,19 @@ describe('OrdersService', () => {
     });
 
     it('should throw BadRequestException on foreign key constraint error (P2003)', async () => {
-      const p2003Error = new Prisma.PrismaClientKnownRequestError(
-        'Foreign key constraint failed',
-        {
-          code: 'P2003',
-          clientVersion: '7.10.1',
-        },
-      );
+      const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
+        code: 'P2003',
+        clientVersion: '7.10.1',
+      });
       mockPrisma.order.create.mockRejectedValueOnce(p2003Error);
 
-      await expect(
-        service.create({ total: 100, userId: 99999 }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create({ total: 100, userId: 99999 })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
-      mockPrisma.order.create.mockRejectedValueOnce(
-        new Error('Database error'),
-      );
+      mockPrisma.order.create.mockRejectedValueOnce(new Error('Database error'));
 
       await expect(service.create({ total: 100, userId: 10 })).rejects.toThrow(
         InternalServerErrorException,
@@ -218,34 +213,25 @@ describe('OrdersService', () => {
     it('should throw NotFoundException if order to update does not exist', async () => {
       mockPrisma.order.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.update(999, { total: 100 })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.update(999, { total: 100 })).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if foreign key check fails during update', async () => {
       mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
-      const p2003Error = new Prisma.PrismaClientKnownRequestError(
-        'Foreign key constraint failed',
-        {
-          code: 'P2003',
-          clientVersion: '7.10.1',
-        },
-      );
+      const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
+        code: 'P2003',
+        clientVersion: '7.10.1',
+      });
       mockPrisma.order.update.mockRejectedValueOnce(p2003Error);
 
-      await expect(service.update(1, { userId: 99999 })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.update(1, { userId: 99999 })).rejects.toThrow(BadRequestException);
     });
 
     it('should throw InternalServerErrorException on generic update failure', async () => {
       mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
       mockPrisma.order.update.mockRejectedValueOnce(new Error('fail'));
 
-      await expect(service.update(1, { total: 10 })).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(service.update(1, { total: 10 })).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -272,9 +258,7 @@ describe('OrdersService', () => {
       mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
       mockPrisma.order.delete.mockRejectedValueOnce(new Error('fail'));
 
-      await expect(service.remove(1)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(service.remove(1)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

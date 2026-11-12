@@ -28,18 +28,14 @@ describe('Orders (e2e)', () => {
   });
 
   it('/v1/jobs/sync-stripe (POST)', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/v1/jobs/sync-stripe')
-      .expect(200);
+    const res = await request(app.getHttpServer()).post('/v1/jobs/sync-stripe').expect(200);
 
     const body = res.body as {
       message: string;
       result: { processed: number; created: number; skipped: number };
     };
 
-    expect(body.message).toBe(
-      'Stripe orders synchronization triggered successfully',
-    );
+    expect(body.message).toBe('Stripe orders synchronization triggered successfully');
     expect(typeof body.result.processed).toBe('number');
     expect(typeof body.result.created).toBe('number');
     expect(typeof body.result.skipped).toBe('number');
@@ -68,14 +64,10 @@ describe('Orders (e2e)', () => {
   });
 
   it('/v1/products (GET) caches products list and serves from cache', async () => {
-    const res1 = await request(app.getHttpServer())
-      .get('/v1/products')
-      .expect(200);
+    const res1 = await request(app.getHttpServer()).get('/v1/products').expect(200);
     expect(Array.isArray(res1.body)).toBe(true);
 
-    const res2 = await request(app.getHttpServer())
-      .get('/v1/products')
-      .expect(200);
+    const res2 = await request(app.getHttpServer()).get('/v1/products').expect(200);
     expect(res2.body).toEqual(res1.body);
   });
 

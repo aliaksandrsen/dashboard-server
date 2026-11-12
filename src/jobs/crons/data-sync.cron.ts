@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleDestroy,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import Stripe from 'stripe';
 import { CronJob } from 'cron';
@@ -19,9 +14,7 @@ export interface SyncResult {
 export class TasksService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TasksService.name);
 
-  private readonly stripe = new Stripe(
-    process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder',
-  );
+  private readonly stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
   constructor(
     private readonly prisma: PrismaService,
@@ -53,11 +46,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
    * @param cronExpression - Cron interval expression (e.g. '5 00 * * *')
    * @param callback - Async function executed on each tick
    */
-  addCronJob(
-    name: string,
-    cronExpression: string,
-    callback: () => Promise<void>,
-  ): void {
+  addCronJob(name: string, cronExpression: string, callback: () => Promise<void>): void {
     const job = CronJob.from({
       cronTime: cronExpression,
       timeZone: 'America/New_York',
@@ -74,9 +63,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     this.schedulerRegistry.addCronJob(name, job);
     job.start();
 
-    this.logger.log(
-      `The cron job ${name} has been added with cron expression: ${cronExpression}.`,
-    );
+    this.logger.log(`The cron job ${name} has been added with cron expression: ${cronExpression}.`);
   }
 
   /**
@@ -102,9 +89,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
    * @param syncDate - Reference date (defaults to current time)
    */
   async cronSyncStripeOrders(syncDate: Date = new Date()): Promise<SyncResult> {
-    this.logger.debug(
-      `Stripe orders sync started at ${new Date().toISOString()}`,
-    );
+    this.logger.debug(`Stripe orders sync started at ${new Date().toISOString()}`);
 
     // Compute previous 24 hours without mutating the input date
     const previousDate = new Date(syncDate.getTime() - 24 * 60 * 60 * 1000);
@@ -127,9 +112,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (latestInvoices.length === 0) {
-      this.logger.debug(
-        `No new Stripe invoices since ${previousDate.toISOString()}`,
-      );
+      this.logger.debug(`No new Stripe invoices since ${previousDate.toISOString()}`);
       return { processed: 0, created: 0, skipped: 0 };
     }
 
@@ -165,23 +148,16 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
             },
           });
           created++;
-          this.logger.log(
-            `Created order record for Stripe invoice ${invoice.id}`,
-          );
+          this.logger.log(`Created order record for Stripe invoice ${invoice.id}`);
         } else {
           skipped++;
         }
       } catch (error) {
-        this.logger.error(
-          `Something happened with invoice ${invoice.id}:`,
-          error,
-        );
+        this.logger.error(`Something happened with invoice ${invoice.id}:`, error);
       }
     }
 
-    this.logger.debug(
-      `Stripe orders sync finished at ${new Date().toISOString()}`,
-    );
+    this.logger.debug(`Stripe orders sync finished at ${new Date().toISOString()}`);
     return {
       processed: latestInvoices.length,
       created,

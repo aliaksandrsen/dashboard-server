@@ -49,15 +49,10 @@ describe('TasksService', () => {
 
   describe('addCronJob, stopCronJob, deleteCronJob', () => {
     it('should register and start a cron job in the registry', () => {
-      const callback = vi
-        .fn<() => Promise<void>>()
-        .mockResolvedValue(undefined);
+      const callback = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       service.addCronJob('test_job', '* * * * *', callback);
 
-      expect(mockSchedulerRegistry.addCronJob).toHaveBeenCalledWith(
-        'test_job',
-        expect.anything(),
-      );
+      expect(mockSchedulerRegistry.addCronJob).toHaveBeenCalledWith('test_job', expect.anything());
     });
 
     it('should stop a cron job via registry', async () => {
@@ -70,9 +65,7 @@ describe('TasksService', () => {
     it('should delete a cron job via registry', () => {
       service.deleteCronJob('test_job');
 
-      expect(mockSchedulerRegistry.deleteCronJob).toHaveBeenCalledWith(
-        'test_job',
-      );
+      expect(mockSchedulerRegistry.deleteCronJob).toHaveBeenCalledWith('test_job');
     });
 
     it('should initialize default sync cron job on onModuleInit', () => {
@@ -107,8 +100,7 @@ describe('TasksService', () => {
       // Mock stripe invoices.list
       const stripeInvoicesListSpy = vi
         .spyOn(
-          (service as unknown as { stripe: { invoices: { list: Mock } } })
-            .stripe.invoices,
+          (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
           'list',
         )
         .mockResolvedValueOnce({ data: [] });
@@ -128,8 +120,7 @@ describe('TasksService', () => {
       };
 
       vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
-          .invoices,
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
         'list',
       ).mockResolvedValueOnce({ data: [mockInvoice] });
 
@@ -159,8 +150,7 @@ describe('TasksService', () => {
       };
 
       vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
-          .invoices,
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
         'list',
       ).mockResolvedValueOnce({ data: [mockInvoice] });
 
@@ -177,14 +167,11 @@ describe('TasksService', () => {
 
     it('should throw when stripe.invoices.list fails', async () => {
       vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
-          .invoices,
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
         'list',
       ).mockRejectedValueOnce(new Error('Stripe API unreachable'));
 
-      await expect(service.cronSyncStripeOrders()).rejects.toThrow(
-        'Stripe API unreachable',
-      );
+      await expect(service.cronSyncStripeOrders()).rejects.toThrow('Stripe API unreachable');
     });
 
     it('should catch error and continue loop if single invoice processing fails', async () => {
@@ -194,14 +181,11 @@ describe('TasksService', () => {
       };
 
       vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
-          .invoices,
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
         'list',
       ).mockResolvedValueOnce({ data: [mockInvoice] });
 
-      mockPrisma.order.findUnique.mockRejectedValueOnce(
-        new Error('DB read error'),
-      );
+      mockPrisma.order.findUnique.mockRejectedValueOnce(new Error('DB read error'));
 
       const result = await service.cronSyncStripeOrders();
       expect(result).toEqual({ processed: 1, created: 0, skipped: 0 });
@@ -215,8 +199,7 @@ describe('TasksService', () => {
       };
 
       vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe
-          .invoices,
+        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
         'list',
       ).mockResolvedValueOnce({ data: [mockInvoice] });
 

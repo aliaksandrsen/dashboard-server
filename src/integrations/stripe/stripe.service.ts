@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import Stripe from 'stripe';
 import {
@@ -21,16 +17,12 @@ export interface CreatePaymentParams {
 export class StripeService {
   private readonly logger = new Logger(StripeService.name);
 
-  private readonly stripe = new Stripe(
-    process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder',
-  );
+  private readonly stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
   /**
    * Creates a product and its associated price in Stripe.
    */
-  public async createProduct(
-    params: CreateStripeProductDto,
-  ): Promise<StripeProductResult> {
+  public async createProduct(params: CreateStripeProductDto): Promise<StripeProductResult> {
     const { name, price, description, currency = 'usd' } = params;
     this.logger.debug(
       `Started product creation in Stripe with data:\n${JSON.stringify(params, null, 2)}`,
@@ -62,9 +54,7 @@ export class StripeService {
         currency,
       });
 
-      this.logger.log(
-        `Response from stripe.prices.create SDK:\n${JSON.stringify(priceResponse)}`,
-      );
+      this.logger.log(`Response from stripe.prices.create SDK:\n${JSON.stringify(priceResponse)}`);
 
       return {
         stripeProductId: productResponse.id,
@@ -98,22 +88,13 @@ export class StripeService {
     this.logger.warn(`Deactivating product in Stripe: ${stripeProductId}`);
     try {
       await this.stripe.products.update(stripeProductId, { active: false });
-      this.logger.log(
-        `Successfully deactivated product ${stripeProductId} in Stripe`,
-      );
+      this.logger.log(`Successfully deactivated product ${stripeProductId} in Stripe`);
     } catch (err: unknown) {
-      this.logger.error(
-        `Failed to deactivate product ${stripeProductId} in Stripe:`,
-        err,
-      );
+      this.logger.error(`Failed to deactivate product ${stripeProductId} in Stripe:`, err);
     }
   }
 
-  public async createPayment({
-    payment,
-    origin,
-    res,
-  }: CreatePaymentParams): Promise<void> {
+  public async createPayment({ payment, origin, res }: CreatePaymentParams): Promise<void> {
     this.logger.log('Starting Stripe payment');
 
     try {

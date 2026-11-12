@@ -13,11 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Order } from '../../generated/prisma/client.js';
 import { OrdersService } from './orders.service.js';
-import {
-  CreateOrderDto,
-  OrderQueryDto,
-  UpdateOrderDto,
-} from './orders.interface.js';
+import { CreateOrderDto, OrderQueryDto, UpdateOrderDto } from './orders.interface.js';
 
 @Controller({
   path: 'orders',

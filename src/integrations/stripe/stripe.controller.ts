@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Headers,
-  HttpException,
-  HttpStatus,
-  Post,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, Headers, HttpException, HttpStatus, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { StripeService } from './stripe.service.js';
 import { CreateStripePaymentDto } from './stripe.interface.js';

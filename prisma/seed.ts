@@ -58,9 +58,7 @@ const main = async () => {
     });
   }
 
-  console.log(
-    '✅ Seeding completed! Created 1 user, 5 products, and 5 orders.',
-  );
+  console.log('✅ Seeding completed! Created 1 user, 5 products, and 5 orders.');
 };
 
 main()

@@ -56,11 +56,7 @@ describe('StripeController', () => {
   it('should fallback to empty origin string if origin header is undefined', async () => {
     mockStripeService.createPayment.mockResolvedValueOnce(undefined);
 
-    await controller.createPayment(
-      { priceId: 'price_123', quantity: 1 },
-      undefined,
-      mockResponse,
-    );
+    await controller.createPayment({ priceId: 'price_123', quantity: 1 }, undefined, mockResponse);
 
     expect(mockStripeService.createPayment).toHaveBeenCalledWith({
       payment: { priceId: 'price_123', quantity: 1 },
@@ -70,9 +66,7 @@ describe('StripeController', () => {
   });
 
   it('should throw HttpException when service throws an error', async () => {
-    mockStripeService.createPayment.mockRejectedValueOnce(
-      new Error('Stripe error'),
-    );
+    mockStripeService.createPayment.mockRejectedValueOnce(new Error('Stripe error'));
 
     await expect(
       controller.createPayment(
@@ -81,10 +75,7 @@ describe('StripeController', () => {
         mockResponse,
       ),
     ).rejects.toThrow(
-      new HttpException(
-        'An error occurred while creating the payment',
-        HttpStatus.BAD_REQUEST,
-      ),
+      new HttpException('An error occurred while creating the payment', HttpStatus.BAD_REQUEST),
     );
   });
 });

@@ -115,9 +115,7 @@ describe('ProductsService', () => {
         stripePriceId: 'price_stripe_rollback',
       });
 
-      mockPrisma.product.create.mockRejectedValueOnce(
-        new Error('Database connection lost'),
-      );
+      mockPrisma.product.create.mockRejectedValueOnce(new Error('Database connection lost'));
 
       await expect(
         service.create({
@@ -126,25 +124,19 @@ describe('ProductsService', () => {
         }),
       ).rejects.toThrow('Failed to create product in database');
 
-      expect(mockStripeService.deactivateProduct).toHaveBeenCalledWith(
-        'prod_stripe_rollback',
-      );
+      expect(mockStripeService.deactivateProduct).toHaveBeenCalledWith('prod_stripe_rollback');
     });
   });
 
   describe('findAll, findOne, update, remove', () => {
     it('should return all products', async () => {
-      mockPrisma.product.findMany.mockResolvedValueOnce([
-        { id: 'uuid-1' },
-      ] as never);
+      mockPrisma.product.findMany.mockResolvedValueOnce([{ id: 'uuid-1' }] as never);
       const res = await service.findAll();
       expect(res).toEqual([{ id: 'uuid-1' }]);
     });
 
     it('should query products with search query', async () => {
-      mockPrisma.product.findMany.mockResolvedValueOnce([
-        { id: 'uuid-1', name: 'Lamp' },
-      ] as never);
+      mockPrisma.product.findMany.mockResolvedValueOnce([{ id: 'uuid-1', name: 'Lamp' }] as never);
       const res = await service.findAll({ search: 'Lamp', skip: 0, take: 5 });
       expect(mockPrisma.product.findMany).toHaveBeenCalledWith({
         skip: 0,
@@ -187,18 +179,15 @@ describe('ProductsService', () => {
 
     it('should throw BadRequestException if update violates unique stripeProductId (P2002)', async () => {
       mockPrisma.product.findUnique.mockResolvedValueOnce({ id: 'uuid-1' });
-      const p2002Error = new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed',
-        {
-          code: 'P2002',
-          clientVersion: '7.10.1',
-        },
-      );
+      const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+      });
       mockPrisma.product.update.mockRejectedValueOnce(p2002Error);
 
-      await expect(
-        service.update('uuid-1', { stripeProductId: 'prod_existing' }),
-      ).rejects.toThrow('A product with this stripeProductId already exists.');
+      await expect(service.update('uuid-1', { stripeProductId: 'prod_existing' })).rejects.toThrow(
+        'A product with this stripeProductId already exists.',
+      );
     });
 
     it('should throw InternalServerErrorException on generic update failure', async () => {
@@ -224,13 +213,9 @@ describe('ProductsService', () => {
 
     it('should throw InternalServerErrorException on delete failure', async () => {
       mockPrisma.product.findUnique.mockResolvedValueOnce({ id: 'uuid-1' });
-      mockPrisma.product.delete.mockRejectedValueOnce(
-        new Error('Delete crash'),
-      );
+      mockPrisma.product.delete.mockRejectedValueOnce(new Error('Delete crash'));
 
-      await expect(service.remove('uuid-1')).rejects.toThrow(
-        'Failed to delete product',
-      );
+      await expect(service.remove('uuid-1')).rejects.toThrow('Failed to delete product');
     });
   });
 });

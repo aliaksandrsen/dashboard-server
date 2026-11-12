@@ -13,11 +13,7 @@ import {
 } from '@nestjs/common';
 import type { User } from '../../generated/prisma/client.js';
 import { UsersService } from './users.service.js';
-import {
-  CreateUserDto,
-  UpdateUserDto,
-  UserQueryDto,
-} from './users.interface.js';
+import { CreateUserDto, UpdateUserDto, UserQueryDto } from './users.interface.js';
 
 @Controller({
   path: 'users',
