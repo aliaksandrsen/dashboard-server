@@ -31,9 +31,11 @@ lerna-debug.log*
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json
+!.vscode/settings.jsonc
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/extensions.jsonc
 
 # dotenv environment variable files
 .env
