@@ -55,7 +55,7 @@
     "@types/node": "26.6.6",
     "@types/pg": "8.23.1",
     "@types/supertest": "7.2.1",
-    "@vitest/coverage-v8": "5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
     "oxfmt": "0.79.0",
     "oxlint": "1.94.0",
     "prisma": "7.10.1",
@@ -67,7 +67,7 @@
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "unplugin-swc": "2.0.0",
-    "vitest": "5.1.0"
+    "vitest": "5.1.1"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
