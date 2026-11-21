@@ -53,6 +53,7 @@ describe('ProductsService', () => {
         name: 'Desk Lamp',
         price: 29.99,
         stripeProductId: 'prod_stripe_123',
+        stripePriceId: 'price_stripe_456',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -75,6 +76,7 @@ describe('ProductsService', () => {
           name: 'Desk Lamp',
           price: 29.99,
           stripeProductId: 'prod_stripe_123',
+          stripePriceId: 'price_stripe_456',
         },
       });
       expect(result).toEqual(mockCreatedProduct);
@@ -86,6 +88,7 @@ describe('ProductsService', () => {
         name: 'Chair',
         price: 99.0,
         stripeProductId: 'prod_pre_existing',
+        stripePriceId: 'price_pre_existing',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -96,6 +99,7 @@ describe('ProductsService', () => {
         name: 'Chair',
         price: 99.0,
         stripeProductId: 'prod_pre_existing',
+        stripePriceId: 'price_pre_existing',
       });
 
       expect(mockStripeService.createProduct).not.toHaveBeenCalled();
@@ -104,6 +108,7 @@ describe('ProductsService', () => {
           name: 'Chair',
           price: 99.0,
           stripeProductId: 'prod_pre_existing',
+          stripePriceId: 'price_pre_existing',
         },
       });
       expect(result).toEqual(mockCreatedProduct);
@@ -186,8 +191,33 @@ describe('ProductsService', () => {
       mockPrisma.product.update.mockRejectedValueOnce(p2002Error);
 
       await expect(service.update('uuid-1', { stripeProductId: 'prod_existing' })).rejects.toThrow(
-        'A product with this stripeProductId already exists.',
+        'A product with this stripeProductId or stripePriceId already exists.',
       );
+    });
+
+    it('should allow clearing stripeProductId and stripePriceId with null', async () => {
+      mockPrisma.product.findUnique.mockResolvedValueOnce({ id: 'uuid-1' });
+      mockPrisma.product.update.mockResolvedValueOnce({
+        id: 'uuid-1',
+        stripeProductId: null,
+        stripePriceId: null,
+      });
+
+      const res = await service.update('uuid-1', {
+        stripeProductId: null,
+        stripePriceId: null,
+      });
+
+      expect(mockPrisma.product.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'uuid-1' },
+          data: expect.objectContaining({
+            stripeProductId: null,
+            stripePriceId: null,
+          }),
+        }),
+      );
+      expect(res.stripeProductId).toBeNull();
     });
 
     it('should throw InternalServerErrorException on generic update failure', async () => {

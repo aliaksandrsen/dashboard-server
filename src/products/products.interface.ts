@@ -6,6 +6,7 @@ import {
   IsPositive,
   IsString,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -25,6 +26,10 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   stripeProductId?: string;
+
+  @IsString()
+  @IsOptional()
+  stripePriceId?: string;
 }
 
 export class UpdateProductDto {
@@ -42,9 +47,15 @@ export class UpdateProductDto {
   @IsOptional()
   description?: string;
 
-  @IsString()
   @IsOptional()
-  stripeProductId?: string;
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  stripeProductId?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  stripePriceId?: string | null;
 }
 
 export class ProductQueryDto {

@@ -42,3 +42,8 @@ export interface StripeProductResult {
   stripeProductId: string;
   stripePriceId: string;
 }
+
+export interface StripeCheckoutSessionResult {
+  sessionId: string;
+  url: string;
+}

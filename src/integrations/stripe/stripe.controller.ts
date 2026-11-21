@@ -1,7 +1,6 @@
-import { Body, Controller, Headers, HttpException, HttpStatus, Post, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Body, Controller, Headers, HttpException, HttpStatus, Post } from '@nestjs/common';
 import { StripeService } from './stripe.service.js';
-import { CreateStripePaymentDto } from './stripe.interface.js';
+import { CreateStripePaymentDto, type StripeCheckoutSessionResult } from './stripe.interface.js';
 
 @Controller({
   path: 'stripe',
@@ -14,21 +13,18 @@ export class StripeController {
   public async createPayment(
     @Body() payment: CreateStripePaymentDto,
     @Headers('origin') origin: string | undefined,
-    @Res() res: Response,
-  ): Promise<void> {
+  ): Promise<StripeCheckoutSessionResult> {
     try {
-      const paymentInfo = await this.stripeService.createPayment({
+      return await this.stripeService.createPayment({
         payment,
-        res,
         origin: origin ?? '',
       });
-
-      return paymentInfo;
-    } catch {
-      throw new HttpException(
-        'An error occurred while creating the payment',
-        HttpStatus.BAD_REQUEST,
-      );
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'An error occurred while creating the payment';
+      throw new HttpException(message, HttpStatus.BAD_REQUEST);
     }
   }
 }

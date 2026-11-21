@@ -104,6 +104,18 @@ describe('OrdersService', () => {
       expect(result).toEqual(sampleOrder);
     });
 
+    it('should throw BadRequestException on duplicate stripeInvoiceId (P2002)', async () => {
+      const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+      });
+      mockPrisma.order.create.mockRejectedValueOnce(p2002Error);
+
+      await expect(service.create({ total: 100, stripeInvoiceId: 'in_duplicate' })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
     it('should throw BadRequestException on foreign key constraint error (P2003)', async () => {
       const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
         code: 'P2003',
@@ -214,6 +226,38 @@ describe('OrdersService', () => {
       mockPrisma.order.findUnique.mockResolvedValueOnce(null);
 
       await expect(service.update(999, { total: 100 })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should allow unassigning userId and clearing stripeInvoiceId with null', async () => {
+      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+      const updatedOrder = { ...sampleOrder, userId: null, stripeInvoiceId: null };
+      mockPrisma.order.update.mockResolvedValueOnce(updatedOrder);
+
+      const result = await service.update(1, { userId: null, stripeInvoiceId: null });
+
+      expect(mockPrisma.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+          data: expect.objectContaining({
+            userId: null,
+            stripeInvoiceId: null,
+          }),
+        }),
+      );
+      expect(result).toEqual(updatedOrder);
+    });
+
+    it('should throw BadRequestException on duplicate stripeInvoiceId during update (P2002)', async () => {
+      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+      const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+      });
+      mockPrisma.order.update.mockRejectedValueOnce(p2002Error);
+
+      await expect(service.update(1, { stripeInvoiceId: 'in_dup' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if foreign key check fails during update', async () => {

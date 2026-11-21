@@ -1,16 +1,15 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import type { Response } from 'express';
 import Stripe from 'stripe';
 import {
   CreateStripePaymentDto,
   CreateStripeProductDto,
+  StripeCheckoutSessionResult,
   StripeProductResult,
 } from './stripe.interface.js';
 
 export interface CreatePaymentParams {
   payment: CreateStripePaymentDto;
   origin: string;
-  res: Response;
 }
 
 @Injectable()
@@ -94,8 +93,15 @@ export class StripeService {
     }
   }
 
-  public async createPayment({ payment, origin, res }: CreatePaymentParams): Promise<void> {
+  public async createPayment({
+    payment,
+    origin,
+  }: CreatePaymentParams): Promise<StripeCheckoutSessionResult> {
     this.logger.log('Starting Stripe payment');
+
+    const fallbackOrigin =
+      process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
+    const resolvedOrigin = origin.trim() || fallbackOrigin;
 
     try {
       const session = await this.stripe.checkout.sessions.create({
@@ -106,15 +112,18 @@ export class StripeService {
           },
         ],
         mode: 'payment',
-        success_url: `${origin}/?success=true`,
-        cancel_url: `${origin}/?canceled=true`,
+        success_url: `${resolvedOrigin}/?success=true`,
+        cancel_url: `${resolvedOrigin}/?canceled=true`,
       });
 
-      if (session.url) {
-        res.status(303).redirect(session.url);
-      } else {
+      if (!session.url) {
         throw new Error('Failed to retrieve Stripe session URL');
       }
+
+      return {
+        sessionId: session.id,
+        url: session.url,
+      };
     } catch (error) {
       this.logger.error('Error creating Stripe payment', error);
       throw error;

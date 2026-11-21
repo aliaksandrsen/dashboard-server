@@ -27,6 +27,7 @@ describe('ProductsController', () => {
     name: 'Wireless Mouse',
     price: 49.99,
     stripeProductId: 'prod_mouse123',
+    stripePriceId: 'price_mouse123',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -66,14 +67,32 @@ describe('ProductsController', () => {
     expect(result).toEqual(sampleProduct);
   });
 
-  it('should findAll products', async () => {
+  it('should bypass cache when query filters are provided', async () => {
     mockProductsService.findAll.mockResolvedValueOnce([sampleProduct]);
     const query = { skip: 0, take: 5, search: 'Mouse' };
 
     const result = await controller.findAll(query);
 
+    expect(mockCacheManager.get).not.toHaveBeenCalled();
+    expect(mockCacheManager.set).not.toHaveBeenCalled();
     expect(mockProductsService.findAll).toHaveBeenCalledWith(query);
     expect(result).toEqual([sampleProduct]);
+  });
+
+  it('should read from and populate cache when query has no filters', async () => {
+    mockCacheManager.get.mockResolvedValueOnce(undefined);
+    mockProductsService.findAll.mockResolvedValueOnce([sampleProduct]);
+
+    const firstResult = await controller.findAll({});
+    expect(mockCacheManager.get).toHaveBeenCalledWith('products');
+    expect(mockProductsService.findAll).toHaveBeenCalledWith({});
+    expect(mockCacheManager.set).toHaveBeenCalledWith('products', [sampleProduct], 30_000);
+    expect(firstResult).toEqual([sampleProduct]);
+
+    mockCacheManager.get.mockResolvedValueOnce([sampleProduct]);
+    const cachedResult = await controller.findAll({});
+    expect(mockProductsService.findAll).toHaveBeenCalledTimes(1);
+    expect(cachedResult).toEqual([sampleProduct]);
   });
 
   it('should findOne product', async () => {

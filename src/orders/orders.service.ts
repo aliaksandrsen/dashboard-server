@@ -45,6 +45,9 @@ export class OrdersService {
     } catch (err: unknown) {
       this.logger.error('Failed to create order', err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2002') {
+          throw new BadRequestException('An order with this stripeInvoiceId already exists.');
+        }
         if (err.code === 'P2003' || err.code === 'P2025') {
           throw new BadRequestException(
             'Invalid userId or productId. Referenced record does not exist.',
@@ -133,6 +136,9 @@ export class OrdersService {
     } catch (err: unknown) {
       this.logger.error(`Failed to update order #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2002') {
+          throw new BadRequestException('An order with this stripeInvoiceId already exists.');
+        }
         if (err.code === 'P2003' || err.code === 'P2025') {
           throw new BadRequestException(
             'Invalid userId or productId provided. Record does not exist.',

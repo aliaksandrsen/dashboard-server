@@ -1,4 +1,13 @@
-import { IsArray, IsInt, IsNumber, IsOptional, IsPositive, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateOrderDto {
@@ -27,14 +36,16 @@ export class UpdateOrderDto {
   @IsOptional()
   total?: number;
 
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsInt()
   @IsPositive()
-  @IsOptional()
-  userId?: number;
+  userId?: number | null;
 
-  @IsString()
   @IsOptional()
-  stripeInvoiceId?: string;
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  stripeInvoiceId?: string | null;
 
   @IsArray()
   @IsString({ each: true })

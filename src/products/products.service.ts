@@ -27,13 +27,20 @@ export class ProductsService {
    * With automatic rollback in Stripe if database insertion fails.
    */
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    const { name, price, description, stripeProductId: existingStripeProductId } = createProductDto;
+    const {
+      name,
+      price,
+      description,
+      stripeProductId: existingStripeProductId,
+      stripePriceId: existingStripePriceId,
+    } = createProductDto;
 
     this.logger.debug(
       `Started two-phase product creation pipeline with input:\n${JSON.stringify(createProductDto, null, 2)}`,
     );
 
     let stripeProductId = existingStripeProductId;
+    let stripePriceId = existingStripePriceId;
     let createdInStripe = false;
 
     // Phase 1: Register product in Stripe if not already provided
@@ -46,8 +53,11 @@ export class ProductsService {
       };
       const stripeResult = await this.stripeService.createProduct(stripeProductParams);
       stripeProductId = stripeResult.stripeProductId;
+      stripePriceId = stripeResult.stripePriceId;
       createdInStripe = true;
-      this.logger.log(`Phase 1 completed: Stripe product created with id: ${stripeProductId}`);
+      this.logger.log(
+        `Phase 1 completed: Stripe product created with id: ${stripeProductId}, priceId: ${stripePriceId}`,
+      );
     } else {
       this.logger.log(`Phase 1 skipped: Existing stripeProductId provided: ${stripeProductId}`);
     }
@@ -57,6 +67,7 @@ export class ProductsService {
       name,
       price,
       stripeProductId,
+      stripePriceId,
     };
 
     this.logger.log(
@@ -86,7 +97,9 @@ export class ProductsService {
 
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException('A product with this stripeProductId already exists.');
+          throw new BadRequestException(
+            'A product with this stripeProductId or stripePriceId already exists.',
+          );
         }
       }
       throw new InternalServerErrorException('Failed to create product in database');
@@ -142,7 +155,7 @@ export class ProductsService {
     // Verify product exists first
     await this.findOne(id);
 
-    const { name, price, stripeProductId } = updateProductDto;
+    const { name, price, stripeProductId, stripePriceId } = updateProductDto;
 
     try {
       const updatedProduct = await this.prisma.product.update({
@@ -151,6 +164,7 @@ export class ProductsService {
           name,
           price,
           stripeProductId,
+          stripePriceId,
           updatedAt: new Date(),
         },
       });
@@ -161,7 +175,9 @@ export class ProductsService {
       this.logger.error(`Failed to update product #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException('A product with this stripeProductId already exists.');
+          throw new BadRequestException(
+            'A product with this stripeProductId or stripePriceId already exists.',
+          );
         }
       }
       throw new InternalServerErrorException('Failed to update product');

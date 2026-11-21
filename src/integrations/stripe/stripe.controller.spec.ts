@@ -1,7 +1,6 @@
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import type { Response } from 'express';
 import { StripeController } from './stripe.controller.js';
 import { StripeService } from './stripe.service.js';
 
@@ -11,11 +10,6 @@ describe('StripeController', () => {
   const mockStripeService = {
     createPayment: vi.fn(),
   };
-
-  const mockResponse = {
-    status: vi.fn().mockReturnThis(),
-    redirect: vi.fn(),
-  } as unknown as Response;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -37,45 +31,44 @@ describe('StripeController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should successfully create a payment session', async () => {
-    mockStripeService.createPayment.mockResolvedValueOnce(undefined);
+  it('should successfully create a payment session and return session details', async () => {
+    const session = {
+      sessionId: 'cs_test_123',
+      url: 'https://checkout.stripe.com/pay/cs_test_123',
+    };
+    mockStripeService.createPayment.mockResolvedValueOnce(session);
 
-    await controller.createPayment(
+    const result = await controller.createPayment(
       { priceId: 'price_123', quantity: 1 },
-      'http://localhost:3000',
-      mockResponse,
+      'http://localhost:5173',
     );
 
     expect(mockStripeService.createPayment).toHaveBeenCalledWith({
       payment: { priceId: 'price_123', quantity: 1 },
-      res: mockResponse,
-      origin: 'http://localhost:3000',
+      origin: 'http://localhost:5173',
     });
+    expect(result).toEqual(session);
   });
 
   it('should fallback to empty origin string if origin header is undefined', async () => {
-    mockStripeService.createPayment.mockResolvedValueOnce(undefined);
+    mockStripeService.createPayment.mockResolvedValueOnce({
+      sessionId: 'cs_test_456',
+      url: 'https://checkout.stripe.com/pay/cs_test_456',
+    });
 
-    await controller.createPayment({ priceId: 'price_123', quantity: 1 }, undefined, mockResponse);
+    await controller.createPayment({ priceId: 'price_123', quantity: 1 }, undefined);
 
     expect(mockStripeService.createPayment).toHaveBeenCalledWith({
       payment: { priceId: 'price_123', quantity: 1 },
-      res: mockResponse,
       origin: '',
     });
   });
 
-  it('should throw HttpException when service throws an error', async () => {
-    mockStripeService.createPayment.mockRejectedValueOnce(new Error('Stripe error'));
+  it('should throw HttpException with service message when service throws an error', async () => {
+    mockStripeService.createPayment.mockRejectedValueOnce(new Error('Invalid priceId'));
 
     await expect(
-      controller.createPayment(
-        { priceId: 'price_123', quantity: 1 },
-        'http://localhost:3000',
-        mockResponse,
-      ),
-    ).rejects.toThrow(
-      new HttpException('An error occurred while creating the payment', HttpStatus.BAD_REQUEST),
-    );
+      controller.createPayment({ priceId: 'price_123', quantity: 1 }, 'http://localhost:5173'),
+    ).rejects.toThrow(new HttpException('Invalid priceId', HttpStatus.BAD_REQUEST));
   });
 });
