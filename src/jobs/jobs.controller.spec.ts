@@ -32,7 +32,7 @@ describe('JobsController', () => {
 
   describe('triggerStripeSync', () => {
     it('should trigger stripe sync and return results', async () => {
-      const mockResult = { processed: 5, created: 2, skipped: 3 };
+      const mockResult = { processed: 5, created: 2, skipped: 3, failed: 0 };
       mockTasksService.cronSyncStripeOrders.mockResolvedValueOnce(mockResult);
 
       const response = await controller.triggerStripeSync();

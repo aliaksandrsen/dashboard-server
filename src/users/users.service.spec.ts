@@ -1,10 +1,6 @@
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { PrismaService } from '../utils/prisma.service.js';
 import { Prisma, User } from '../../generated/prisma/client.js';
@@ -66,7 +62,7 @@ describe('UsersService', () => {
       expect(result).toEqual(sampleUser);
     });
 
-    it('should throw BadRequestException when email already exists (P2002)', async () => {
+    it('should throw ConflictException when email already exists (P2002)', async () => {
       const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
         code: 'P2002',
         clientVersion: '7.10.1',
@@ -79,7 +75,7 @@ describe('UsersService', () => {
           name: 'Duplicate',
           address: '123 St',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
@@ -184,7 +180,7 @@ describe('UsersService', () => {
       await expect(service.update(999, { name: 'New' })).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException if update violates unique email', async () => {
+    it('should throw ConflictException if update violates unique email', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(sampleUser);
       const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
         code: 'P2002',
@@ -193,7 +189,7 @@ describe('UsersService', () => {
       mockPrisma.user.update.mockRejectedValueOnce(p2002Error);
 
       await expect(service.update(1, { email: 'already-used@example.com' })).rejects.toThrow(
-        BadRequestException,
+        ConflictException,
       );
     });
 
@@ -222,6 +218,17 @@ describe('UsersService', () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(null);
 
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ConflictException if user cannot be deleted due to foreign key constraint (P2003)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce(sampleUser);
+      const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
+        code: 'P2003',
+        clientVersion: '7.10.1',
+      });
+      mockPrisma.user.delete.mockRejectedValueOnce(p2003Error);
+
+      await expect(service.remove(1)).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on deletion failure', async () => {

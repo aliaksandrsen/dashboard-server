@@ -1,5 +1,13 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import Stripe from 'stripe';
+import { resolveAllowedOrigin } from '../../utils/origin.util.js';
 import {
   CreateStripePaymentDto,
   CreateStripeProductDto,
@@ -16,7 +24,23 @@ export interface CreatePaymentParams {
 export class StripeService {
   private readonly logger = new Logger(StripeService.name);
 
-  private readonly stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
+  private readonly stripe: Stripe;
+
+  constructor() {
+    const apiKey = process.env.STRIPE_SECRET_KEY?.trim();
+
+    if (!apiKey) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('STRIPE_SECRET_KEY environment variable is required in production');
+      }
+
+      this.logger.warn(
+        'STRIPE_SECRET_KEY is not configured; Stripe API requests will fail unless mocked.',
+      );
+    }
+
+    this.stripe = new Stripe(apiKey || 'sk_test_placeholder');
+  }
 
   /**
    * Creates a product and its associated price in Stripe.
@@ -99,9 +123,7 @@ export class StripeService {
   }: CreatePaymentParams): Promise<StripeCheckoutSessionResult> {
     this.logger.log('Starting Stripe payment');
 
-    const fallbackOrigin =
-      process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:5173';
-    const resolvedOrigin = origin.trim() || fallbackOrigin;
+    const resolvedOrigin = resolveAllowedOrigin(origin);
 
     try {
       const session = await this.stripe.checkout.sessions.create({
@@ -117,16 +139,62 @@ export class StripeService {
       });
 
       if (!session.url) {
-        throw new Error('Failed to retrieve Stripe session URL');
+        throw new BadGatewayException('Failed to retrieve Stripe session URL');
       }
 
       return {
         sessionId: session.id,
         url: session.url,
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       this.logger.error('Error creating Stripe payment', error);
-      throw error;
+
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError ||
+        error instanceof Stripe.errors.StripeCardError
+      ) {
+        throw new BadRequestException(error.message);
+      }
+
+      throw new BadGatewayException('Failed to create Stripe payment session');
+    }
+  }
+
+  /**
+   * Lists all Stripe invoices matching the provided filters across all pages.
+   */
+  public async listInvoices(params: Stripe.InvoiceListParams): Promise<Stripe.Invoice[]> {
+    const invoices: Stripe.Invoice[] = [];
+    let startingAfter: string | undefined;
+
+    try {
+      while (true) {
+        const response = await this.stripe.invoices.list({
+          limit: 100,
+          ...params,
+          ...(startingAfter ? { starting_after: startingAfter } : {}),
+        });
+
+        invoices.push(...response.data);
+
+        if (!response.has_more || response.data.length === 0) {
+          break;
+        }
+
+        startingAfter = response.data[response.data.length - 1]?.id;
+        if (!startingAfter) {
+          break;
+        }
+      }
+
+      return invoices;
+    } catch (err: unknown) {
+      this.logger.error('Failed to fetch invoices from Stripe', err);
+      throw err;
     }
   }
 }

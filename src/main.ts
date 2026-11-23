@@ -3,6 +3,7 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
+import { getAllowedOrigins } from './utils/origin.util.js';
 import { createWinstonLogger } from './utils/winston.logger.js';
 
 async function bootstrap() {
@@ -12,9 +13,7 @@ async function bootstrap() {
 
   app.disable('x-powered-by');
 
-  const allowedOrigins = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map((origin) => origin.trim())
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+  const allowedOrigins = getAllowedOrigins();
 
   app.enableCors({
     origin: allowedOrigins,
@@ -29,6 +28,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
     }),
   );

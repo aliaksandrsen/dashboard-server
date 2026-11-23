@@ -1,5 +1,6 @@
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
 import { ProductsService } from './products.service.js';
 import { PrismaService } from '../utils/prisma.service.js';
 import { StripeService } from '../integrations/stripe/stripe.service.js';
@@ -131,6 +132,28 @@ describe('ProductsService', () => {
 
       expect(mockStripeService.deactivateProduct).toHaveBeenCalledWith('prod_stripe_rollback');
     });
+
+    it('should rollback and throw ConflictException on duplicate stripeProductId or stripePriceId (P2002)', async () => {
+      mockStripeService.createProduct.mockResolvedValueOnce({
+        stripeProductId: 'prod_dup',
+        stripePriceId: 'price_dup',
+      });
+
+      const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+      });
+      mockPrisma.product.create.mockRejectedValueOnce(p2002Error);
+
+      await expect(
+        service.create({
+          name: 'Duplicate Item',
+          price: 15.0,
+        }),
+      ).rejects.toThrow(ConflictException);
+
+      expect(mockStripeService.deactivateProduct).toHaveBeenCalledWith('prod_dup');
+    });
   });
 
   describe('findAll, findOne, update, remove', () => {
@@ -182,7 +205,7 @@ describe('ProductsService', () => {
       expect(res).toEqual({ id: 'uuid-1', name: 'Updated' });
     });
 
-    it('should throw BadRequestException if update violates unique stripeProductId (P2002)', async () => {
+    it('should throw ConflictException if update violates unique stripeProductId (P2002)', async () => {
       mockPrisma.product.findUnique.mockResolvedValueOnce({ id: 'uuid-1' });
       const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
         code: 'P2002',
@@ -191,7 +214,7 @@ describe('ProductsService', () => {
       mockPrisma.product.update.mockRejectedValueOnce(p2002Error);
 
       await expect(service.update('uuid-1', { stripeProductId: 'prod_existing' })).rejects.toThrow(
-        'A product with this stripeProductId or stripePriceId already exists.',
+        ConflictException,
       );
     });
 
@@ -239,6 +262,17 @@ describe('ProductsService', () => {
 
       const res = await service.remove('uuid-1');
       expect(res).toEqual({ id: 'uuid-1' });
+    });
+
+    it('should throw ConflictException if product cannot be deleted due to foreign key constraint (P2003)', async () => {
+      mockPrisma.product.findUnique.mockResolvedValueOnce({ id: 'uuid-1' });
+      const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
+        code: 'P2003',
+        clientVersion: '7.10.1',
+      });
+      mockPrisma.product.delete.mockRejectedValueOnce(p2003Error);
+
+      await expect(service.remove('uuid-1')).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on delete failure', async () => {

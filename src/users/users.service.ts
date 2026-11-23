@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -37,7 +37,7 @@ export class UsersService {
       this.logger.error('Failed to create user', err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException('A user with this email already exists.');
+          throw new ConflictException('A user with this email already exists.');
         }
       }
       throw new InternalServerErrorException('Failed to create user');
@@ -121,7 +121,7 @@ export class UsersService {
       this.logger.error(`Failed to update user #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException('A user with this email already exists.');
+          throw new ConflictException('A user with this email already exists.');
         }
       }
       throw new InternalServerErrorException('Failed to update user');
@@ -146,6 +146,11 @@ export class UsersService {
       return deletedUser;
     } catch (err: unknown) {
       this.logger.error(`Failed to delete user #${id}`, err);
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2003') {
+          throw new ConflictException('Cannot delete user because related records exist.');
+        }
+      }
       throw new InternalServerErrorException('Failed to delete user');
     }
   }

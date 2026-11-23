@@ -1,11 +1,13 @@
-import { vi, describe, beforeEach, it, expect, type Mock } from 'vitest';
+import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { TasksService } from './data-sync.cron.js';
+import { StripeService } from '../../integrations/stripe/stripe.service.js';
 import { PrismaService } from '../../utils/prisma.service.js';
 
 describe('TasksService', () => {
   let service: TasksService;
+  const originalTimezone = process.env.STRIPE_SYNC_TIMEZONE;
 
   const mockPrisma = {
     order: {
@@ -15,6 +17,10 @@ describe('TasksService', () => {
     user: {
       findUnique: vi.fn(),
     },
+  };
+
+  const mockStripeService = {
+    listInvoices: vi.fn(),
   };
 
   const mockCronJob = {
@@ -36,11 +42,20 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: StripeService, useValue: mockStripeService },
         { provide: SchedulerRegistry, useValue: mockSchedulerRegistry },
       ],
     }).compile();
 
     service = module.get<TasksService>(TasksService);
+  });
+
+  afterEach(() => {
+    if (originalTimezone === undefined) {
+      delete process.env.STRIPE_SYNC_TIMEZONE;
+    } else {
+      process.env.STRIPE_SYNC_TIMEZONE = originalTimezone;
+    }
   });
 
   it('should be defined', () => {
@@ -53,6 +68,17 @@ describe('TasksService', () => {
       service.addCronJob('test_job', '* * * * *', callback);
 
       expect(mockSchedulerRegistry.addCronJob).toHaveBeenCalledWith('test_job', expect.anything());
+    });
+
+    it('should configure cron timezone from STRIPE_SYNC_TIMEZONE when set', () => {
+      process.env.STRIPE_SYNC_TIMEZONE = 'UTC';
+      const callback = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+      service.addCronJob('utc_job', '* * * * *', callback);
+
+      const registeredJob = mockSchedulerRegistry.addCronJob.mock.calls[0]?.[1] as {
+        cronTime?: { timeZone?: string };
+      };
+      expect(registeredJob?.cronTime?.timeZone).toBe('UTC');
     });
 
     it('should stop a cron job via registry', async () => {
@@ -96,19 +122,18 @@ describe('TasksService', () => {
   });
 
   describe('cronSyncStripeOrders', () => {
-    it('should return processed=0 when Stripe returns no invoices', async () => {
-      // Mock stripe invoices.list
-      const stripeInvoicesListSpy = vi
-        .spyOn(
-          (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
-          'list',
-        )
-        .mockResolvedValueOnce({ data: [] });
+    it('should request paid invoices via StripeService and return processed=0 when none exist', async () => {
+      mockStripeService.listInvoices.mockResolvedValueOnce([]);
 
-      const result = await service.cronSyncStripeOrders();
+      const syncDate = new Date('2026-11-23T12:00:00.000Z');
+      const expectedSince = Math.floor((syncDate.getTime() - 24 * 60 * 60 * 1000) / 1000);
+      const result = await service.cronSyncStripeOrders(syncDate);
 
-      expect(stripeInvoicesListSpy).toHaveBeenCalled();
-      expect(result).toEqual({ processed: 0, created: 0, skipped: 0 });
+      expect(mockStripeService.listInvoices).toHaveBeenCalledWith({
+        status: 'paid',
+        created: { gte: expectedSince },
+      });
+      expect(result).toEqual({ processed: 0, created: 0, skipped: 0, failed: 0 });
       expect(mockPrisma.order.create).not.toHaveBeenCalled();
     });
 
@@ -119,10 +144,7 @@ describe('TasksService', () => {
         customer_email: 'buyer@example.com',
       };
 
-      vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
-        'list',
-      ).mockResolvedValueOnce({ data: [mockInvoice] });
+      mockStripeService.listInvoices.mockResolvedValueOnce([mockInvoice]);
 
       mockPrisma.order.findUnique.mockResolvedValueOnce(null);
       mockPrisma.user.findUnique.mockResolvedValueOnce({
@@ -133,7 +155,7 @@ describe('TasksService', () => {
 
       const result = await service.cronSyncStripeOrders();
 
-      expect(result).toEqual({ processed: 1, created: 1, skipped: 0 });
+      expect(result).toEqual({ processed: 1, created: 1, skipped: 0, failed: 0 });
       expect(mockPrisma.order.create).toHaveBeenCalledWith({
         data: {
           stripeInvoiceId: 'in_123',
@@ -149,10 +171,7 @@ describe('TasksService', () => {
         total: 2000,
       };
 
-      vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
-        'list',
-      ).mockResolvedValueOnce({ data: [mockInvoice] });
+      mockStripeService.listInvoices.mockResolvedValueOnce([mockInvoice]);
 
       mockPrisma.order.findUnique.mockResolvedValueOnce({
         id: 99,
@@ -161,34 +180,31 @@ describe('TasksService', () => {
 
       const result = await service.cronSyncStripeOrders();
 
-      expect(result).toEqual({ processed: 1, created: 0, skipped: 1 });
+      expect(result).toEqual({ processed: 1, created: 0, skipped: 1, failed: 0 });
       expect(mockPrisma.order.create).not.toHaveBeenCalled();
     });
 
-    it('should throw when stripe.invoices.list fails', async () => {
-      vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
-        'list',
-      ).mockRejectedValueOnce(new Error('Stripe API unreachable'));
+    it('should throw when stripeService.listInvoices fails', async () => {
+      mockStripeService.listInvoices.mockRejectedValueOnce(new Error('Stripe API unreachable'));
 
       await expect(service.cronSyncStripeOrders()).rejects.toThrow('Stripe API unreachable');
     });
 
-    it('should catch error and continue loop if single invoice processing fails', async () => {
-      const mockInvoice = {
-        id: 'in_bad',
-        total: 1000,
-      };
+    it('should catch error, increment failed counter, and continue loop if single invoice processing fails', async () => {
+      const mockInvoices = [
+        { id: 'in_bad', total: 1000 },
+        { id: 'in_good', total: 2500 },
+      ];
 
-      vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
-        'list',
-      ).mockResolvedValueOnce({ data: [mockInvoice] });
+      mockStripeService.listInvoices.mockResolvedValueOnce(mockInvoices);
 
-      mockPrisma.order.findUnique.mockRejectedValueOnce(new Error('DB read error'));
+      mockPrisma.order.findUnique
+        .mockRejectedValueOnce(new Error('DB read error'))
+        .mockResolvedValueOnce(null);
+      mockPrisma.order.create.mockResolvedValueOnce({ id: 10 });
 
       const result = await service.cronSyncStripeOrders();
-      expect(result).toEqual({ processed: 1, created: 0, skipped: 0 });
+      expect(result).toEqual({ processed: 2, created: 1, skipped: 0, failed: 1 });
     });
 
     it('should handle invoice with null total and unknown customer email', async () => {
@@ -198,10 +214,7 @@ describe('TasksService', () => {
         customer_email: 'unknown@example.com',
       };
 
-      vi.spyOn(
-        (service as unknown as { stripe: { invoices: { list: Mock } } }).stripe.invoices,
-        'list',
-      ).mockResolvedValueOnce({ data: [mockInvoice] });
+      mockStripeService.listInvoices.mockResolvedValueOnce([mockInvoice]);
 
       mockPrisma.order.findUnique.mockResolvedValueOnce(null);
       mockPrisma.user.findUnique.mockResolvedValueOnce(null);
@@ -209,7 +222,7 @@ describe('TasksService', () => {
 
       const result = await service.cronSyncStripeOrders();
 
-      expect(result).toEqual({ processed: 1, created: 1, skipped: 0 });
+      expect(result).toEqual({ processed: 1, created: 1, skipped: 0, failed: 0 });
       expect(mockPrisma.order.create).toHaveBeenCalledWith({
         data: {
           stripeInvoiceId: 'in_null_total',

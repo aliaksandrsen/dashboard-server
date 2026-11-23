@@ -1,4 +1,13 @@
-import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Min } from 'class-validator';
+import {
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateUserDto {
@@ -42,6 +51,7 @@ export class UserQueryDto {
   @Type(() => Number)
   @IsInt()
   @IsPositive()
+  @Max(100)
   take?: number;
 
   @IsOptional()

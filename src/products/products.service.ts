@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -97,7 +97,7 @@ export class ProductsService {
 
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException(
+          throw new ConflictException(
             'A product with this stripeProductId or stripePriceId already exists.',
           );
         }
@@ -175,7 +175,7 @@ export class ProductsService {
       this.logger.error(`Failed to update product #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException(
+          throw new ConflictException(
             'A product with this stripeProductId or stripePriceId already exists.',
           );
         }
@@ -202,6 +202,13 @@ export class ProductsService {
       return deletedProduct;
     } catch (err: unknown) {
       this.logger.error(`Failed to delete product #${id}`, err);
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2003') {
+          throw new ConflictException(
+            'Cannot delete product because it is referenced by existing orders.',
+          );
+        }
+      }
       throw new InternalServerErrorException('Failed to delete product');
     }
   }

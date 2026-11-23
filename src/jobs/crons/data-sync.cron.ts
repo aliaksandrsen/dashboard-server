@@ -1,23 +1,24 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { CronJob } from 'cron';
+import { StripeService } from '../../integrations/stripe/stripe.service.js';
 import { PrismaService } from '../../utils/prisma.service.js';
 
 export interface SyncResult {
   processed: number;
   created: number;
   skipped: number;
+  failed: number;
 }
 
 @Injectable()
 export class TasksService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TasksService.name);
 
-  private readonly stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
-
   constructor(
     private readonly prisma: PrismaService,
+    private readonly stripeService: StripeService,
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
@@ -47,9 +48,10 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
    * @param callback - Async function executed on each tick
    */
   addCronJob(name: string, cronExpression: string, callback: () => Promise<void>): void {
+    const timeZone = process.env.STRIPE_SYNC_TIMEZONE || 'America/New_York';
     const job = CronJob.from({
       cronTime: cronExpression,
-      timeZone: 'America/New_York',
+      timeZone,
       unrefTimeout: true,
       onTick: async () => {
         try {
@@ -63,7 +65,9 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     this.schedulerRegistry.addCronJob(name, job);
     job.start();
 
-    this.logger.log(`The cron job ${name} has been added with cron expression: ${cronExpression}.`);
+    this.logger.log(
+      `The cron job ${name} has been added with cron expression: ${cronExpression} (timezone: ${timeZone}).`,
+    );
   }
 
   /**
@@ -84,7 +88,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Synchronizes Stripe invoices with the local database as Orders.
+   * Synchronizes paid Stripe invoices with the local database as Orders.
    *
    * @param syncDate - Reference date (defaults to current time)
    */
@@ -97,6 +101,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     const previousTimestampSeconds = Math.floor(previousDate.getTime() / 1000);
 
     const params: Stripe.InvoiceListParams = {
+      status: 'paid',
       created: {
         gte: previousTimestampSeconds,
       },
@@ -104,8 +109,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
 
     let latestInvoices: Stripe.Invoice[];
     try {
-      const response = await this.stripe.invoices.list(params);
-      latestInvoices = response.data;
+      latestInvoices = await this.stripeService.listInvoices(params);
     } catch (error) {
       this.logger.error('Failed to fetch invoices from Stripe', error);
       throw error;
@@ -113,11 +117,12 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
 
     if (latestInvoices.length === 0) {
       this.logger.debug(`No new Stripe invoices since ${previousDate.toISOString()}`);
-      return { processed: 0, created: 0, skipped: 0 };
+      return { processed: 0, created: 0, skipped: 0, failed: 0 };
     }
 
     let created = 0;
     let skipped = 0;
+    let failed = 0;
 
     for (const invoice of latestInvoices) {
       try {
@@ -153,6 +158,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
           skipped++;
         }
       } catch (error) {
+        failed++;
         this.logger.error(`Something happened with invoice ${invoice.id}:`, error);
       }
     }
@@ -162,6 +168,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
       processed: latestInvoices.length,
       created,
       skipped,
+      failed,
     };
   }
 }

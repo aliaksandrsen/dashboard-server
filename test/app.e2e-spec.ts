@@ -45,6 +45,7 @@ describe('Dashboard Server API (e2e)', () => {
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
+        forbidNonWhitelisted: true,
         transform: true,
       }),
     );
@@ -54,6 +55,7 @@ describe('Dashboard Server API (e2e)', () => {
       processed: 2,
       created: 1,
       skipped: 1,
+      failed: 0,
     });
 
     await app.init();
@@ -63,7 +65,7 @@ describe('Dashboard Server API (e2e)', () => {
     await app.close();
   });
 
-  it('supports full Users CRUD and validation', async () => {
+  it('supports full Users CRUD, validation, max take, forbidNonWhitelisted, and 409 Conflict', async () => {
     const email = `e2e_user_${Date.now()}@example.com`;
 
     await request(app.getHttpServer())
@@ -71,10 +73,27 @@ describe('Dashboard Server API (e2e)', () => {
       .send({ email: 'not-an-email', name: '', address: '' })
       .expect(400);
 
+    // Reject unknown extra properties (forbidNonWhitelisted)
+    await request(app.getHttpServer())
+      .post('/v1/users')
+      .send({ email, name: 'E2E User', address: '123 Test Ave', extraField: 'forbidden' })
+      .expect(400);
+
+    // Reject excessive pagination limit (@Max(100))
+    await request(app.getHttpServer()).get('/v1/users').query({ take: 101 }).expect(400);
+    await request(app.getHttpServer()).get('/v1/products').query({ take: 101 }).expect(400);
+    await request(app.getHttpServer()).get('/v1/orders').query({ take: 101 }).expect(400);
+
     const created = await request(app.getHttpServer())
       .post('/v1/users')
       .send({ email, name: 'E2E User', address: '123 Test Ave' })
       .expect(201);
+
+    // Duplicate email returns 409 Conflict
+    await request(app.getHttpServer())
+      .post('/v1/users')
+      .send({ email, name: 'Duplicate User', address: '456 Test Ave' })
+      .expect(409);
 
     const userId = (created.body as { id: number }).id;
     expect(userId).toBeDefined();
@@ -197,7 +216,7 @@ describe('Dashboard Server API (e2e)', () => {
 
     expect(res.body).toEqual({
       message: 'Stripe orders synchronization triggered successfully',
-      result: { processed: 2, created: 1, skipped: 1 },
+      result: { processed: 2, created: 1, skipped: 1, failed: 0 },
     });
   });
 });

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
-import { PrismaService } from './utils/prisma.service.js';
+import { PrismaModule } from './utils/prisma.module.js';
 import { StripeModule } from './integrations/stripe/stripe.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
@@ -10,6 +10,7 @@ import { JobsModule } from './jobs/jobs.module.js';
 
 @Module({
   imports: [
+    PrismaModule,
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: () => {
@@ -28,6 +29,5 @@ import { JobsModule } from './jobs/jobs.module.js';
     UsersModule,
     JobsModule,
   ],
-  providers: [PrismaService],
 })
 export class AppModule {}

@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
   Min,
   ValidateIf,
 } from 'class-validator';
@@ -69,6 +70,7 @@ export class ProductQueryDto {
   @Type(() => Number)
   @IsInt()
   @IsPositive()
+  @Max(100)
   take?: number;
 
   @IsOptional()

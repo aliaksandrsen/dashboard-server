@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -46,7 +47,7 @@ export class OrdersService {
       this.logger.error('Failed to create order', err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException('An order with this stripeInvoiceId already exists.');
+          throw new ConflictException('An order with this stripeInvoiceId already exists.');
         }
         if (err.code === 'P2003' || err.code === 'P2025') {
           throw new BadRequestException(
@@ -137,7 +138,7 @@ export class OrdersService {
       this.logger.error(`Failed to update order #${id}`, err);
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
-          throw new BadRequestException('An order with this stripeInvoiceId already exists.');
+          throw new ConflictException('An order with this stripeInvoiceId already exists.');
         }
         if (err.code === 'P2003' || err.code === 'P2025') {
           throw new BadRequestException(
@@ -167,6 +168,11 @@ export class OrdersService {
       return deletedOrder;
     } catch (err: unknown) {
       this.logger.error(`Failed to delete order #${id}`, err);
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2003') {
+          throw new ConflictException('Cannot delete order because related records exist.');
+        }
+      }
       throw new InternalServerErrorException('Failed to delete order');
     }
   }

@@ -1,6 +1,6 @@
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { BadGatewayException, BadRequestException } from '@nestjs/common';
 import { StripeController } from './stripe.controller.js';
 import { StripeService } from './stripe.service.js';
 
@@ -64,11 +64,23 @@ describe('StripeController', () => {
     });
   });
 
-  it('should throw HttpException with service message when service throws an error', async () => {
-    mockStripeService.createPayment.mockRejectedValueOnce(new Error('Invalid priceId'));
+  it('should propagate BadRequestException from StripeService without altering status', async () => {
+    mockStripeService.createPayment.mockRejectedValueOnce(
+      new BadRequestException('Invalid priceId'),
+    );
 
     await expect(
       controller.createPayment({ priceId: 'price_123', quantity: 1 }, 'http://localhost:5173'),
-    ).rejects.toThrow(new HttpException('Invalid priceId', HttpStatus.BAD_REQUEST));
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should propagate BadGatewayException from StripeService without rewriting to 400', async () => {
+    mockStripeService.createPayment.mockRejectedValueOnce(
+      new BadGatewayException('Failed to create Stripe payment session'),
+    );
+
+    await expect(
+      controller.createPayment({ priceId: 'price_123', quantity: 1 }, 'http://localhost:5173'),
+    ).rejects.toThrow(BadGatewayException);
   });
 });

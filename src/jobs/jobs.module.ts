@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { PrismaService } from '../utils/prisma.service.js';
+import { StripeModule } from '../integrations/stripe/stripe.module.js';
 import { TasksService } from './crons/data-sync.cron.js';
 import { JobsController } from './jobs.controller.js';
 
 @Module({
-  imports: [ScheduleModule.forRoot()],
+  imports: [ScheduleModule.forRoot(), StripeModule],
   controllers: [JobsController],
-  providers: [PrismaService, TasksService],
+  providers: [TasksService],
   exports: [TasksService],
 })
 export class JobsModule {}

@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
   Min,
   ValidateIf,
 } from 'class-validator';
@@ -64,6 +65,7 @@ export class OrderQueryDto {
   @Type(() => Number)
   @IsInt()
   @IsPositive()
+  @Max(100)
   take?: number;
 
   @IsOptional()
