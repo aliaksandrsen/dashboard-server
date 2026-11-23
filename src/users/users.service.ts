@@ -1,13 +1,7 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service.js';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './users.interface.js';
-import { User, Prisma } from '../../generated/prisma/client.js';
+import type { User } from '../../generated/prisma/client.js';
 
 @Injectable()
 export class UsersService {
@@ -22,26 +16,16 @@ export class UsersService {
     const { email, name, address } = createUserDto;
     this.logger.log(`Creating new user with email: ${email}`);
 
-    try {
-      const user = await this.prisma.user.create({
-        data: {
-          email,
-          name,
-          address,
-        },
-      });
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        name,
+        address,
+      },
+    });
 
-      this.logger.log(`User #${user.id} created successfully`);
-      return user;
-    } catch (err: unknown) {
-      this.logger.error('Failed to create user', err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') {
-          throw new ConflictException('A user with this email already exists.');
-        }
-      }
-      throw new InternalServerErrorException('Failed to create user');
-    }
+    this.logger.log(`User #${user.id} created successfully`);
+    return user;
   }
 
   /**
@@ -100,32 +84,19 @@ export class UsersService {
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     this.logger.log(`Updating user #${id}`);
 
-    // Verify user exists first
-    await this.findOne(id);
-
     const { email, name, address } = updateUserDto;
 
-    try {
-      const updatedUser = await this.prisma.user.update({
-        where: { id },
-        data: {
-          email,
-          name,
-          address,
-        },
-      });
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: {
+        email,
+        name,
+        address,
+      },
+    });
 
-      this.logger.log(`User #${id} updated successfully`);
-      return updatedUser;
-    } catch (err: unknown) {
-      this.logger.error(`Failed to update user #${id}`, err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') {
-          throw new ConflictException('A user with this email already exists.');
-        }
-      }
-      throw new InternalServerErrorException('Failed to update user');
-    }
+    this.logger.log(`User #${id} updated successfully`);
+    return updatedUser;
   }
 
   /**
@@ -134,24 +105,11 @@ export class UsersService {
   async remove(id: number): Promise<User> {
     this.logger.log(`Deleting user #${id}`);
 
-    // Verify user exists first
-    await this.findOne(id);
+    const deletedUser = await this.prisma.user.delete({
+      where: { id },
+    });
 
-    try {
-      const deletedUser = await this.prisma.user.delete({
-        where: { id },
-      });
-
-      this.logger.log(`User #${id} deleted successfully`);
-      return deletedUser;
-    } catch (err: unknown) {
-      this.logger.error(`Failed to delete user #${id}`, err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2003') {
-          throw new ConflictException('Cannot delete user because related records exist.');
-        }
-      }
-      throw new InternalServerErrorException('Failed to delete user');
-    }
+    this.logger.log(`User #${id} deleted successfully`);
+    return deletedUser;
   }
 }

@@ -1,15 +1,9 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service.js';
 import { StripeService } from '../integrations/stripe/stripe.service.js';
 import { CreateStripeProductDto } from '../integrations/stripe/stripe.interface.js';
 import { CreateProductDto, ProductQueryDto, UpdateProductDto } from './products.interface.js';
-import { Product, Prisma } from '../../generated/prisma/client.js';
+import type { Product } from '../../generated/prisma/client.js';
 
 @Injectable()
 export class ProductsService {
@@ -95,14 +89,7 @@ export class ProductsService {
         await this.stripeService.deactivateProduct(stripeProductId);
       }
 
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') {
-          throw new ConflictException(
-            'A product with this stripeProductId or stripePriceId already exists.',
-          );
-        }
-      }
-      throw new InternalServerErrorException('Failed to create product in database');
+      throw err;
     }
   }
 
@@ -152,36 +139,20 @@ export class ProductsService {
   async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
     this.logger.log(`Updating product #${id}`);
 
-    // Verify product exists first
-    await this.findOne(id);
-
     const { name, price, stripeProductId, stripePriceId } = updateProductDto;
 
-    try {
-      const updatedProduct = await this.prisma.product.update({
-        where: { id },
-        data: {
-          name,
-          price,
-          stripeProductId,
-          stripePriceId,
-          updatedAt: new Date(),
-        },
-      });
+    const updatedProduct = await this.prisma.product.update({
+      where: { id },
+      data: {
+        name,
+        price,
+        stripeProductId,
+        stripePriceId,
+      },
+    });
 
-      this.logger.log(`Product #${id} updated successfully`);
-      return updatedProduct;
-    } catch (err: unknown) {
-      this.logger.error(`Failed to update product #${id}`, err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') {
-          throw new ConflictException(
-            'A product with this stripeProductId or stripePriceId already exists.',
-          );
-        }
-      }
-      throw new InternalServerErrorException('Failed to update product');
-    }
+    this.logger.log(`Product #${id} updated successfully`);
+    return updatedProduct;
   }
 
   /**
@@ -190,26 +161,11 @@ export class ProductsService {
   async remove(id: string): Promise<Product> {
     this.logger.log(`Deleting product #${id}`);
 
-    // Verify product exists first
-    await this.findOne(id);
+    const deletedProduct = await this.prisma.product.delete({
+      where: { id },
+    });
 
-    try {
-      const deletedProduct = await this.prisma.product.delete({
-        where: { id },
-      });
-
-      this.logger.log(`Product #${id} deleted successfully`);
-      return deletedProduct;
-    } catch (err: unknown) {
-      this.logger.error(`Failed to delete product #${id}`, err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2003') {
-          throw new ConflictException(
-            'Cannot delete product because it is referenced by existing orders.',
-          );
-        }
-      }
-      throw new InternalServerErrorException('Failed to delete product');
-    }
+    this.logger.log(`Product #${id} deleted successfully`);
+    return deletedProduct;
   }
 }

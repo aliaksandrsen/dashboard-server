@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service.js';
 import { CreateOrderDto, OrderQueryDto, UpdateOrderDto } from './orders.interface.js';
 import { Order, Prisma } from '../../generated/prisma/client.js';
@@ -23,40 +16,25 @@ export class OrdersService {
     const { total, userId, stripeInvoiceId, productIds } = createOrderDto;
     this.logger.log(`Creating new order for user ${userId}`);
 
-    try {
-      const order = await this.prisma.order.create({
-        data: {
-          total,
-          userId,
-          stripeInvoiceId,
-          products: productIds?.length
-            ? {
-                connect: productIds.map((id) => ({ id })),
-              }
-            : undefined,
-        },
-        include: {
-          user: true,
-          products: true,
-        },
-      });
+    const order = await this.prisma.order.create({
+      data: {
+        total,
+        userId,
+        stripeInvoiceId,
+        products: productIds?.length
+          ? {
+              connect: productIds.map((id) => ({ id })),
+            }
+          : undefined,
+      },
+      include: {
+        user: true,
+        products: true,
+      },
+    });
 
-      this.logger.log(`Order #${order.id} created successfully`);
-      return order;
-    } catch (err: unknown) {
-      this.logger.error('Failed to create order', err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') {
-          throw new ConflictException('An order with this stripeInvoiceId already exists.');
-        }
-        if (err.code === 'P2003' || err.code === 'P2025') {
-          throw new BadRequestException(
-            'Invalid userId or productId. Referenced record does not exist.',
-          );
-        }
-      }
-      throw new InternalServerErrorException('Failed to create order');
-    }
+    this.logger.log(`Order #${order.id} created successfully`);
+    return order;
   }
 
   /**
@@ -106,8 +84,16 @@ export class OrdersService {
   async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
     this.logger.log(`Updating order #${id}`);
 
-    // Verify order exists first
-    await this.findOne(id);
+    // Lightweight existence check to distinguish 404 (order not found) from 400 (invalid productId)
+    const existing = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      this.logger.warn(`Order #${id} not found`);
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
 
     const { total, userId, stripeInvoiceId, productIds } = updateOrderDto;
 
@@ -124,7 +110,6 @@ export class OrdersService {
                   set: productIds.map((productId) => ({ id: productId })),
                 }
               : undefined,
-          updatedAt: new Date(),
         },
         include: {
           user: true,
@@ -135,18 +120,12 @@ export class OrdersService {
       this.logger.log(`Order #${id} updated successfully`);
       return updatedOrder;
     } catch (err: unknown) {
-      this.logger.error(`Failed to update order #${id}`, err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') {
-          throw new ConflictException('An order with this stripeInvoiceId already exists.');
-        }
-        if (err.code === 'P2003' || err.code === 'P2025') {
-          throw new BadRequestException(
-            'Invalid userId or productId provided. Record does not exist.',
-          );
-        }
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new BadRequestException(
+          'Invalid productId provided. Referenced record does not exist.',
+        );
       }
-      throw new InternalServerErrorException('Failed to update order');
+      throw err;
     }
   }
 
@@ -156,24 +135,11 @@ export class OrdersService {
   async remove(id: number): Promise<Order> {
     this.logger.log(`Deleting order #${id}`);
 
-    // Verify order exists first
-    await this.findOne(id);
+    const deletedOrder = await this.prisma.order.delete({
+      where: { id },
+    });
 
-    try {
-      const deletedOrder = await this.prisma.order.delete({
-        where: { id },
-      });
-
-      this.logger.log(`Order #${id} deleted successfully`);
-      return deletedOrder;
-    } catch (err: unknown) {
-      this.logger.error(`Failed to delete order #${id}`, err);
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2003') {
-          throw new ConflictException('Cannot delete order because related records exist.');
-        }
-      }
-      throw new InternalServerErrorException('Failed to delete order');
-    }
+    this.logger.log(`Order #${id} deleted successfully`);
+    return deletedOrder;
   }
 }

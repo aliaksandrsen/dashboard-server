@@ -1,11 +1,6 @@
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  ConflictException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service.js';
 import { PrismaService } from '../utils/prisma.service.js';
 import { Order, Prisma } from '../../generated/prisma/client.js';
@@ -105,35 +100,15 @@ describe('OrdersService', () => {
       expect(result).toEqual(sampleOrder);
     });
 
-    it('should throw ConflictException on duplicate stripeInvoiceId (P2002)', async () => {
+    it('should propagate Prisma P2002 error to global exception filter', async () => {
       const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
         code: 'P2002',
         clientVersion: '7.10.1',
       });
       mockPrisma.order.create.mockRejectedValueOnce(p2002Error);
 
-      await expect(service.create({ total: 100, stripeInvoiceId: 'in_duplicate' })).rejects.toThrow(
-        ConflictException,
-      );
-    });
-
-    it('should throw BadRequestException on foreign key constraint error (P2003)', async () => {
-      const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
-        code: 'P2003',
-        clientVersion: '7.10.1',
-      });
-      mockPrisma.order.create.mockRejectedValueOnce(p2003Error);
-
-      await expect(service.create({ total: 100, userId: 99999 })).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('should throw InternalServerErrorException on unexpected error', async () => {
-      mockPrisma.order.create.mockRejectedValueOnce(new Error('Database error'));
-
-      await expect(service.create({ total: 100, userId: 10 })).rejects.toThrow(
-        InternalServerErrorException,
+      await expect(service.create({ total: 100, stripeInvoiceId: 'in_duplicate' })).rejects.toBe(
+        p2002Error,
       );
     });
   });
@@ -201,8 +176,8 @@ describe('OrdersService', () => {
   });
 
   describe('update', () => {
-    it('should update an order with productIds set', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+    it('should check lightweight existence and update order with productIds set', async () => {
+      mockPrisma.order.findUnique.mockResolvedValueOnce({ id: 1 });
       const updatedOrder = { ...sampleOrder, total: 200.0 };
       mockPrisma.order.update.mockResolvedValueOnce(updatedOrder);
 
@@ -211,15 +186,23 @@ describe('OrdersService', () => {
         productIds: ['prod-1'],
       });
 
-      const updateCall = mockPrisma.order.update.mock.calls[0] as [
-        {
-          where: { id: number };
-          data: { total?: number; products?: { set: { id: string }[] } };
+      expect(mockPrisma.order.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        select: { id: true },
+      });
+      expect(mockPrisma.order.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: {
+          total: 200.0,
+          userId: undefined,
+          stripeInvoiceId: undefined,
+          products: { set: [{ id: 'prod-1' }] },
         },
-      ];
-      expect(updateCall[0].where).toEqual({ id: 1 });
-      expect(updateCall[0].data.total).toBe(200.0);
-      expect(updateCall[0].data.products).toEqual({ set: [{ id: 'prod-1' }] });
+        include: {
+          user: true,
+          products: true,
+        },
+      });
       expect(result).toEqual(updatedOrder);
     });
 
@@ -230,7 +213,7 @@ describe('OrdersService', () => {
     });
 
     it('should allow unassigning userId and clearing stripeInvoiceId with null', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+      mockPrisma.order.findUnique.mockResolvedValueOnce({ id: 1 });
       const updatedOrder = { ...sampleOrder, userId: null, stripeInvoiceId: null };
       mockPrisma.order.update.mockResolvedValueOnce(updatedOrder);
 
@@ -248,73 +231,52 @@ describe('OrdersService', () => {
       expect(result).toEqual(updatedOrder);
     });
 
-    it('should throw ConflictException on duplicate stripeInvoiceId during update (P2002)', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+    it('should throw BadRequestException if referenced productId does not exist (P2025)', async () => {
+      mockPrisma.order.findUnique.mockResolvedValueOnce({ id: 1 });
+      const p2025Error = new Prisma.PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '7.10.1',
+      });
+      mockPrisma.order.update.mockRejectedValueOnce(p2025Error);
+
+      await expect(service.update(1, { productIds: ['non-existent-uuid'] })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should propagate Prisma P2002 error during update to global exception filter', async () => {
+      mockPrisma.order.findUnique.mockResolvedValueOnce({ id: 1 });
       const p2002Error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
         code: 'P2002',
         clientVersion: '7.10.1',
       });
       mockPrisma.order.update.mockRejectedValueOnce(p2002Error);
 
-      await expect(service.update(1, { stripeInvoiceId: 'in_dup' })).rejects.toThrow(
-        ConflictException,
-      );
-    });
-
-    it('should throw BadRequestException if foreign key check fails during update', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
-      const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
-        code: 'P2003',
-        clientVersion: '7.10.1',
-      });
-      mockPrisma.order.update.mockRejectedValueOnce(p2003Error);
-
-      await expect(service.update(1, { userId: 99999 })).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw InternalServerErrorException on generic update failure', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
-      mockPrisma.order.update.mockRejectedValueOnce(new Error('fail'));
-
-      await expect(service.update(1, { total: 10 })).rejects.toThrow(InternalServerErrorException);
+      await expect(service.update(1, { stripeInvoiceId: 'in_dup' })).rejects.toBe(p2002Error);
     });
   });
 
   describe('remove', () => {
-    it('should delete and return the order', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+    it('should delete and return the order directly without redundant findOne', async () => {
       mockPrisma.order.delete.mockResolvedValueOnce(sampleOrder);
 
       const result = await service.remove(1);
 
+      expect(mockPrisma.order.findUnique).not.toHaveBeenCalled();
       expect(mockPrisma.order.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });
       expect(result).toEqual(sampleOrder);
     });
 
-    it('should throw NotFoundException if order to remove does not exist', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(null);
-
-      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw ConflictException if order cannot be deleted due to foreign key constraint (P2003)', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
+    it('should propagate Prisma P2003 error on delete to global exception filter', async () => {
       const p2003Error = new Prisma.PrismaClientKnownRequestError('Foreign key constraint failed', {
         code: 'P2003',
         clientVersion: '7.10.1',
       });
       mockPrisma.order.delete.mockRejectedValueOnce(p2003Error);
 
-      await expect(service.remove(1)).rejects.toThrow(ConflictException);
-    });
-
-    it('should throw InternalServerErrorException on deletion failure', async () => {
-      mockPrisma.order.findUnique.mockResolvedValueOnce(sampleOrder);
-      mockPrisma.order.delete.mockRejectedValueOnce(new Error('fail'));
-
-      await expect(service.remove(1)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.remove(1)).rejects.toBe(p2003Error);
     });
   });
 });
