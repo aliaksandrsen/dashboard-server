@@ -48,8 +48,8 @@ importers:
         specifier: 0.15.1
         version: 0.15.1
       cron:
-        specifier: 4.4.0
-        version: 4.4.0
+        specifier: 4.4.1
+        version: 4.4.1
       dotenv:
         specifier: 18.0.10
         version: 18.0.10
@@ -2022,6 +2022,10 @@ packages:
 
   cron@4.4.0:
     resolution: {integrity: sha512-fkdfq+b+AHI4cKdhZlppHveI/mgz2qpiYxcm+t5E5TsxX7QrLS1VE0+7GENEk9z0EeGPcpSciGv6ez24duWhwQ==}
+    engines: {node: '>=18.x'}
+
+  cron@4.4.1:
+    resolution: {integrity: sha512-ycMs0wTezbyWLuT6JKQWpLPr2q4H0x9yZfcitH+sThOg/VtijRHFHkikE683gjzgmziz0sdyQY5ZWdcNfBVXtA==}
     engines: {node: '>=18.x'}
 
   cross-spawn@7.0.6:
@@ -5060,6 +5064,11 @@ snapshots:
   create-require@1.1.1: {}
 
   cron@4.4.0:
+    dependencies:
+      '@types/luxon': 3.7.6
+      luxon: 3.7.2
+
+  cron@4.4.1:
     dependencies:
       '@types/luxon': 3.7.6
       luxon: 3.7.2
