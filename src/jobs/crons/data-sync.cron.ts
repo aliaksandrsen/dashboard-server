@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import type Stripe from 'stripe';
 import { CronJob } from 'cron';
@@ -20,10 +21,14 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
     private readonly schedulerRegistry: SchedulerRegistry,
+    @Optional() private readonly configService?: ConfigService,
   ) {}
 
   onModuleInit(): void {
-    const defaultCronSchedule = process.env.STRIPE_SYNC_CRON ?? '5 00 * * *';
+    const defaultCronSchedule =
+      this.configService?.get<string>('STRIPE_SYNC_CRON') ??
+      process.env.STRIPE_SYNC_CRON ??
+      '5 00 * * *';
     this.addCronJob('sync_stripe_orders', defaultCronSchedule, async () => {
       await this.cronSyncStripeOrders();
     });
@@ -48,7 +53,10 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
    * @param callback - Async function executed on each tick
    */
   addCronJob(name: string, cronExpression: string, callback: () => Promise<void>): void {
-    const timeZone = process.env.STRIPE_SYNC_TIMEZONE || 'America/New_York';
+    const timeZone =
+      this.configService?.get<string>('STRIPE_SYNC_TIMEZONE') ??
+      process.env.STRIPE_SYNC_TIMEZONE ??
+      'America/New_York';
     const job = CronJob.from({
       cronTime: cronExpression,
       timeZone,

@@ -5,9 +5,11 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
-import { resolveAllowedOrigin } from '../../utils/origin.util.js';
+import { getAllowedOrigins, resolveAllowedOrigin } from '../../utils/origin.util.js';
 import {
   CreateStripePaymentDto,
   CreateStripeProductDto,
@@ -26,11 +28,14 @@ export class StripeService {
 
   private readonly stripe: Stripe;
 
-  constructor() {
-    const apiKey = process.env.STRIPE_SECRET_KEY?.trim();
+  constructor(@Optional() private readonly configService?: ConfigService) {
+    const apiKey = (
+      this.configService?.get<string>('STRIPE_SECRET_KEY') ?? process.env.STRIPE_SECRET_KEY
+    )?.trim();
+    const nodeEnv = this.configService?.get<string>('NODE_ENV') ?? process.env.NODE_ENV;
 
     if (!apiKey) {
-      if (process.env.NODE_ENV === 'production') {
+      if (nodeEnv === 'production') {
         throw new Error('STRIPE_SECRET_KEY environment variable is required in production');
       }
 
@@ -123,7 +128,10 @@ export class StripeService {
   }: CreatePaymentParams): Promise<StripeCheckoutSessionResult> {
     this.logger.log('Starting Stripe payment');
 
-    const resolvedOrigin = resolveAllowedOrigin(origin);
+    const allowedOrigins = getAllowedOrigins(
+      this.configService?.get<string>('FRONTEND_URL') ?? process.env.FRONTEND_URL,
+    );
+    const resolvedOrigin = resolveAllowedOrigin(origin, allowedOrigins);
 
     try {
       const session = await this.stripe.checkout.sessions.create({
