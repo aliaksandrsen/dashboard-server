@@ -1,7 +1,8 @@
-import 'dotenv/config';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 import { getAllowedOrigins } from './utils/origin.util.js';
 import { createWinstonLogger } from './utils/winston.logger.js';
@@ -11,15 +12,19 @@ async function bootstrap() {
     logger: createWinstonLogger(),
   });
 
+  const configService = app.get(ConfigService);
+
+  app.enableShutdownHooks();
+  app.use(helmet());
   app.disable('x-powered-by');
 
-  const allowedOrigins = getAllowedOrigins();
+  const allowedOrigins = getAllowedOrigins(configService.get<string>('FRONTEND_URL'));
 
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
   });
 
   app.enableVersioning({
@@ -32,7 +37,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  await app.listen(process.env.PORT ?? 3000);
+
+  const port = configService.get<number>('PORT', 3000);
+  await app.listen(port);
 }
 
 await bootstrap();

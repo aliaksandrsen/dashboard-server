@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module.js';
 import { StripeService } from './../src/integrations/stripe/stripe.service.js';
 import { TasksService } from './../src/jobs/crons/data-sync.cron.js';
 import { createWinstonLogger } from './../src/utils/winston.logger.js';
 
 describe('Dashboard Server API (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
 
   const mockStripeService = {
     createProduct: vi.fn().mockImplementation(async ({ name }: { name: string }) => {
@@ -36,9 +37,12 @@ describe('Dashboard Server API (e2e)', () => {
       .useValue(mockStripeService)
       .compile();
 
-    app = moduleFixture.createNestApplication({
+    app = moduleFixture.createNestApplication<NestExpressApplication>({
       logger: createWinstonLogger(),
     });
+    app.enableShutdownHooks();
+    app.use(helmet());
+    app.disable('x-powered-by');
     app.enableVersioning({
       type: VersioningType.URI,
     });
@@ -65,13 +69,50 @@ describe('Dashboard Server API (e2e)', () => {
     await app.close();
   });
 
-  it('supports full Users CRUD, validation, max take, forbidNonWhitelisted, and 409 Conflict', async () => {
+  it('exposes /health, /health/live, /health/ready with helmet and x-request-id headers', async () => {
+    const liveRes = await request(app.getHttpServer())
+      .get('/health/live')
+      .set('X-Request-Id', 'e2e-health-trace')
+      .expect(200);
+
+    expect(liveRes.body).toEqual({
+      status: 'ok',
+      timestamp: expect.any(String),
+    });
+    expect(liveRes.headers['x-request-id']).toBe('e2e-health-trace');
+    expect(liveRes.headers['x-content-type-options']).toBe('nosniff');
+    expect(liveRes.headers['x-powered-by']).toBeUndefined();
+    expect(liveRes.headers['x-ratelimit-limit']).toBeUndefined();
+
+    const healthRes = await request(app.getHttpServer()).get('/health').expect(200);
+    expect(healthRes.body).toMatchObject({
+      status: 'ok',
+      details: {
+        database: { status: 'up' },
+        cache: { status: 'up' },
+      },
+    });
+
+    const readyRes = await request(app.getHttpServer()).get('/health/ready').expect(200);
+    expect((readyRes.body as { status: string }).status).toBe('ok');
+  });
+
+  it('supports full Users CRUD, validation, max take, forbidNonWhitelisted, unified errors, and 409 Conflict', async () => {
     const email = `e2e_user_${Date.now()}@example.com`;
 
-    await request(app.getHttpServer())
+    const invalidRes = await request(app.getHttpServer())
       .post('/v1/users')
       .send({ email: 'not-an-email', name: '', address: '' })
       .expect(400);
+
+    expect(invalidRes.body).toMatchObject({
+      statusCode: 400,
+      error: 'Bad Request',
+      path: '/v1/users',
+      requestId: expect.any(String),
+      timestamp: expect.any(String),
+    });
+    expect(invalidRes.headers['x-ratelimit-limit']).toBeDefined();
 
     // Reject unknown extra properties (forbidNonWhitelisted)
     await request(app.getHttpServer())
@@ -89,11 +130,17 @@ describe('Dashboard Server API (e2e)', () => {
       .send({ email, name: 'E2E User', address: '123 Test Ave' })
       .expect(201);
 
-    // Duplicate email returns 409 Conflict
-    await request(app.getHttpServer())
+    // Duplicate email returns 409 Conflict via AllExceptionsFilter
+    const conflictRes = await request(app.getHttpServer())
       .post('/v1/users')
       .send({ email, name: 'Duplicate User', address: '456 Test Ave' })
       .expect(409);
+    expect(conflictRes.body).toMatchObject({
+      statusCode: 409,
+      error: 'Conflict',
+      path: '/v1/users',
+      requestId: expect.any(String),
+    });
 
     const userId = (created.body as { id: number }).id;
     expect(userId).toBeDefined();
@@ -109,6 +156,11 @@ describe('Dashboard Server API (e2e)', () => {
 
     await request(app.getHttpServer()).delete(`/v1/users/${userId}`).expect(200);
     await request(app.getHttpServer()).get(`/v1/users/${userId}`).expect(404);
+    await request(app.getHttpServer())
+      .patch(`/v1/users/${userId}`)
+      .send({ name: 'Ghost' })
+      .expect(404);
+    await request(app.getHttpServer()).delete(`/v1/users/${userId}`).expect(404);
   });
 
   it('supports Products CRUD, saves stripePriceId, and does not poison cache on search', async () => {

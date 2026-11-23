@@ -30,6 +30,8 @@ export function createWinstonLogger(
       }),
       new transports.File({
         filename: './logs/server.log',
+        maxsize: 10 * 1024 * 1024,
+        maxFiles: 5,
         format: format.combine(format.timestamp(), format.json()),
       }),
     ],
